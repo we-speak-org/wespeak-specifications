@@ -1,0 +1,156 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LearningProfile",
+  "description": "Profil d'apprentissage d'une langue (collection: learning_profiles)",
+  "type": "object",
+  "properties": {
+    "_id": {
+      "type": "string",
+      "description": "MongoDB ObjectId",
+      "pattern": "^[0-9a-fA-F]{24}$"
+    },
+    "userId": {
+      "type": "string",
+      "description": "Référence vers UserProfile._id",
+      "pattern": "^[0-9a-fA-F]{24}$"
+    },
+    "keycloakUserId": {
+      "type": "string",
+      "description": "UUID Keycloak (pour requêtes rapides)",
+      "format": "uuid"
+    },
+    "nativeLanguageCode": {
+      "type": "string",
+      "description": "Langue maternelle (ISO 639-1)",
+      "pattern": "^[a-z]{2}(-[A-Z]{2})?$",
+      "examples": ["fr", "en", "es", "pt-BR"]
+    },
+    "targetLanguageCode": {
+      "type": "string",
+      "description": "Langue cible à apprendre (ISO 639-1)",
+      "pattern": "^[a-z]{2}(-[A-Z]{2})?$",
+      "examples": ["en", "fr", "es-ES", "en-US"]
+    },
+    "currentLevel": {
+      "type": "string",
+      "description": "Niveau CECRL actuel",
+      "enum": ["A1", "A2", "B1", "B2", "C1", "C2"],
+      "default": "A1"
+    },
+    "assessedLevel": {
+      "type": ["string", "null"],
+      "description": "Niveau évalué par test de placement",
+      "enum": ["A1", "A2", "B1", "B2", "C1", "C2", null]
+    },
+    "goal": {
+      "type": "string",
+      "description": "Objectif d'apprentissage",
+      "enum": ["work", "travel", "studies", "personal", "other"],
+      "default": "personal"
+    },
+    "goalDescription": {
+      "type": ["string", "null"],
+      "description": "Description détaillée de l'objectif",
+      "maxLength": 500
+    },
+    "preferredAccent": {
+      "type": ["string", "null"],
+      "description": "Accent préféré pour l'apprentissage",
+      "pattern": "^[a-z]{2}-[A-Z]{2}$",
+      "examples": ["en-US", "en-GB", "es-ES", "es-MX", "fr-FR", "fr-CA"]
+    },
+    "weeklyGoalMinutes": {
+      "type": "integer",
+      "description": "Objectif d'apprentissage hebdomadaire (minutes)",
+      "minimum": 0,
+      "maximum": 1680,
+      "default": 150
+    },
+    "isActive": {
+      "type": "boolean",
+      "description": "Profil actuellement utilisé",
+      "default": true
+    },
+    "isPrimary": {
+      "type": "boolean",
+      "description": "Profil principal de l'utilisateur (un seul par user)",
+      "default": false
+    },
+    "createdAt": {
+      "type": "string",
+      "description": "Date de création (ISO 8601)",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "description": "Date de dernière mise à jour (ISO 8601)",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "_id",
+    "userId",
+    "keycloakUserId",
+    "nativeLanguageCode",
+    "targetLanguageCode",
+    "currentLevel",
+    "goal",
+    "weeklyGoalMinutes",
+    "isActive",
+    "isPrimary",
+    "createdAt",
+    "updatedAt"
+  ],
+  "indexes": [
+    {
+      "name": "userId_targetLanguage_unique",
+      "keys": {
+        "userId": 1,
+        "targetLanguageCode": 1
+      },
+      "unique": true,
+      "description": "Un seul profil par langue cible par utilisateur"
+    },
+    {
+      "name": "keycloakUserId_idx",
+      "keys": { "keycloakUserId": 1 }
+    },
+    {
+      "name": "isActive_isPrimary_idx",
+      "keys": {
+        "isActive": 1,
+        "isPrimary": 1
+      }
+    },
+    {
+      "name": "targetLanguageCode_currentLevel_idx",
+      "keys": {
+        "targetLanguageCode": 1,
+        "currentLevel": 1
+      },
+      "description": "Pour matchmaking par langue et niveau"
+    }
+  ],
+  "validationRules": {
+    "maxProfilesPerUser": 5,
+    "onePrimaryPerUser": true,
+    "nativeCannotEqualTarget": true
+  },
+  "example": {
+    "_id": "507f1f77bcf86cd799439022",
+    "userId": "507f1f77bcf86cd799439011",
+    "keycloakUserId": "a3b5c7d9-1234-5678-90ab-cdef12345678",
+    "nativeLanguageCode": "fr",
+    "targetLanguageCode": "en",
+    "currentLevel": "B1",
+    "assessedLevel": "A2",
+    "goal": "work",
+    "goalDescription": "Improve my business English for international meetings and presentations",
+    "preferredAccent": "en-US",
+    "weeklyGoalMinutes": 180,
+    "isActive": true,
+    "isPrimary": true,
+    "createdAt": "2025-01-01T08:00:00Z",
+    "updatedAt": "2025-01-15T10:30:00Z"
+  }
+}

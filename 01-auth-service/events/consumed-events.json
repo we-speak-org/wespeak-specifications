@@ -1,0 +1,165 @@
+{
+  "topic": "keycloak.admin.events",
+  "description": "Événements admin émis par Keycloak (consommés par auth-service)",
+  "partition_key": "userId",
+  "consumer_group": "auth-service",
+  "events": [
+    {
+      "eventType": "REGISTER",
+      "description": "Un nouvel utilisateur s'est inscrit via Keycloak",
+      "action": "Créer un UserProfile dans MongoDB",
+      "schema": {
+        "id": "string (UUID)",
+        "time": "integer (timestamp Unix ms)",
+        "type": "string (REGISTER)",
+        "realmId": "string",
+        "clientId": "string",
+        "userId": "string (UUID Keycloak)",
+        "sessionId": "string",
+        "ipAddress": "string",
+        "details": {
+          "username": "string",
+          "email": "string",
+          "first_name": "string",
+          "last_name": "string",
+          "email_verified": "string (true/false)"
+        }
+      },
+      "example": {
+        "id": "a1b2c3d4-1234-5678-90ab-cdef12345678",
+        "time": 1705320000000,
+        "type": "REGISTER",
+        "realmId": "wespeak",
+        "clientId": "wespeak-frontend",
+        "userId": "a3b5c7d9-1234-5678-90ab-cdef12345678",
+        "sessionId": "session-uuid",
+        "ipAddress": "192.168.1.1",
+        "details": {
+          "username": "john.doe",
+          "email": "john.doe@example.com",
+          "first_name": "John",
+          "last_name": "Doe",
+          "email_verified": "false"
+        }
+      },
+      "handler": "KeycloakEventConsumer.handleRegister()",
+      "implementation": "Créer UserProfile avec keycloakUserId, email, displayName (first_name + last_name), subscriptionTier=free, emailVerified=false"
+    },
+    {
+      "eventType": "VERIFY_EMAIL",
+      "description": "L'utilisateur a vérifié son email",
+      "action": "Mettre à jour emailVerified = true",
+      "schema": {
+        "id": "string (UUID)",
+        "time": "integer (timestamp Unix ms)",
+        "type": "string (VERIFY_EMAIL)",
+        "realmId": "string",
+        "userId": "string (UUID Keycloak)",
+        "details": {}
+      },
+      "example": {
+        "id": "b2c3d4e5-2345-6789-01bc-def123456789",
+        "time": 1705326000000,
+        "type": "VERIFY_EMAIL",
+        "realmId": "wespeak",
+        "userId": "a3b5c7d9-1234-5678-90ab-cdef12345678",
+        "details": {}
+      },
+      "handler": "KeycloakEventConsumer.handleVerifyEmail()",
+      "implementation": "Trouver UserProfile par keycloakUserId, mettre à jour emailVerified = true"
+    },
+    {
+      "eventType": "UPDATE_EMAIL",
+      "description": "L'utilisateur a changé son email dans Keycloak",
+      "action": "Mettre à jour l'email dans UserProfile",
+      "schema": {
+        "id": "string (UUID)",
+        "time": "integer (timestamp Unix ms)",
+        "type": "string (UPDATE_EMAIL)",
+        "realmId": "string",
+        "userId": "string (UUID Keycloak)",
+        "details": {
+          "previous_email": "string",
+          "updated_email": "string"
+        }
+      },
+      "example": {
+        "id": "c3d4e5f6-3456-7890-12cd-ef0123456789",
+        "time": 1705332000000,
+        "type": "UPDATE_EMAIL",
+        "realmId": "wespeak",
+        "userId": "a3b5c7d9-1234-5678-90ab-cdef12345678",
+        "details": {
+          "previous_email": "john.doe@example.com",
+          "updated_email": "john.newemail@example.com"
+        }
+      },
+      "handler": "KeycloakEventConsumer.handleUpdateEmail()",
+      "implementation": "Mettre à jour email dans UserProfile, set emailVerified = false"
+    },
+    {
+      "eventType": "DELETE_ACCOUNT",
+      "description": "L'utilisateur a supprimé son compte dans Keycloak",
+      "action": "Soft delete UserProfile et LearningProfiles",
+      "schema": {
+        "id": "string (UUID)",
+        "time": "integer (timestamp Unix ms)",
+        "type": "string (DELETE_ACCOUNT)",
+        "realmId": "string",
+        "userId": "string (UUID Keycloak)",
+        "details": {}
+      },
+      "example": {
+        "id": "d4e5f6g7-4567-8901-23de-f01234567890",
+        "time": 1705338000000,
+        "type": "DELETE_ACCOUNT",
+        "realmId": "wespeak",
+        "userId": "a3b5c7d9-1234-5678-90ab-cdef12345678",
+        "details": {}
+      },
+      "handler": "KeycloakEventConsumer.handleDeleteAccount()",
+      "implementation": "Soft delete UserProfile (deletedAt = now), marquer LearningProfiles comme inactifs, publier événement user.deleted"
+    },
+    {
+      "eventType": "LOGIN",
+      "description": "L'utilisateur s'est connecté (optionnel - pour tracking lastLoginAt)",
+      "action": "Mettre à jour lastLoginAt",
+      "schema": {
+        "id": "string (UUID)",
+        "time": "integer (timestamp Unix ms)",
+        "type": "string (LOGIN)",
+        "realmId": "string",
+        "userId": "string (UUID Keycloak)",
+        "sessionId": "string",
+        "ipAddress": "string",
+        "details": {}
+      },
+      "example": {
+        "id": "e5f6g7h8-5678-9012-34ef-012345678901",
+        "time": 1705344000000,
+        "type": "LOGIN",
+        "realmId": "wespeak",
+        "userId": "a3b5c7d9-1234-5678-90ab-cdef12345678",
+        "sessionId": "session-uuid-2",
+        "ipAddress": "192.168.1.2",
+        "details": {}
+      },
+      "handler": "KeycloakEventConsumer.handleLogin()",
+      "implementation": "Mettre à jour lastLoginAt = event.time"
+    }
+  ],
+  "configuration": {
+    "kafka": {
+      "bootstrap_servers": "kafka:9092",
+      "consumer_group": "auth-service",
+      "auto_offset_reset": "earliest",
+      "enable_auto_commit": false,
+      "max_poll_records": 100
+    },
+    "idempotency": {
+      "enabled": true,
+      "strategy": "event_id_tracking",
+      "description": "Stocker event.id dans Redis avec TTL 7 jours pour éviter double traitement"
+    }
+  }
+}

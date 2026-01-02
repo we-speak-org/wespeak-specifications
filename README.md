@@ -1,313 +1,135 @@
-# WeSpeak - Spécifications Techniques
+# WeSpeak Specifications - Ready for Emergent.sh
 
-Ce répertoire contient toutes les spécifications techniques détaillées du projet WeSpeak.
+**Spécifications techniques complètes** pour générer le code avec l'IA (Emergent.sh, Cursor, etc.)
 
 ---
 
-## 📁 Structure
+## 🎯 WeSpeak : Plateforme d'apprentissage des langues
+
+Combine :
+1. 📚 Structure pédagogique progressive
+2. 🗣️ Conversations réelles 1v1 (WebRTC)
+3. 🤖 Feedback IA (STT + NLP)
+4. 🎮 Gamification (XP, badges, streaks)
+
+---
+
+## 📂 Structure du Repository
+
+Chaque microservice a son dossier avec :
+- ✅ **README.md** : Vue d'ensemble
+- ✅ **data-models/** : Schémas MongoDB (JSON Schema)
+- ✅ **api/** : Endpoints REST + curl examples
+- ✅ **events/** : Kafka events (published/consumed)
+- ✅ **diagrams/** : Mermaid diagrams
+- ✅ **emergent/** : 🔥 **CHECKLIST + PROMPTS pour Emergent.sh**
+
+---
+
+## 🚀 Microservices
+
+### 1. Auth Service ([Voir specs](./01-auth-service/README.md))
+- Profils utilisateurs + profils d'apprentissage multi-langues
+- Crédits/quotas (free: 3 conversations/semaine)
+- Sync Keycloak (Kafka)
+
+### 2-7. Autres services
+- Lesson, Conversation, Feedback, Gamification, Recommendation, API Gateway
+
+---
+
+## 🛠️ Utiliser avec Emergent.sh
+
+### Fichiers clés par service :
 
 ```
-specs/
-├── README.md (ce fichier)
-├── SPECIFICATIONS_SUMMARY.md ⭐ (Document principal - 1109 lignes)
-└── services/
-    ├── 01-auth-service.md ✅ (Complet - 1275 lignes)
-    ├── 02-lesson-service.md (Voir SUMMARY)
-    ├── 03-conversation-service.md (Voir SUMMARY)
-    ├── 04-feedback-service.md (Voir SUMMARY)
-    ├── 05-gamification-service.md (Voir SUMMARY)
-    ├── 06-recommendation-service.md (Voir SUMMARY)
-    └── 07-api-gateway.md (Voir SUMMARY)
+01-auth-service/
+├── emergent/
+│   ├── CHECKLIST.md          ✅ Liste de tâches complète
+│   ├── TECHNICAL_CONTEXT.md  🛠️ Contexte pour l'IA
+│   └── PROMPTS.md            💬 Prompts prêts à copier
 ```
 
----
+### Workflow :
 
-## 🎯 Documents Principaux
-
-### ⭐ SPECIFICATIONS_SUMMARY.md
-**Le document le plus important** - Résumé exécutif complet de tous les microservices avec :
-- Architecture globale
-- Modèles de données complets
-- Endpoints API documentés
-- Événements Kafka avec exemples JSON
-- Règles métier détaillées
-- Algorithmes (matchmaking, recommandations, XP, etc.)
-- Standards de sécurité
-- Stratégies de cache
-- Quotas par tier
-
-**👉 [Lire SPECIFICATIONS_SUMMARY.md](./SPECIFICATIONS_SUMMARY.md)**
+1. **Lire les specs** : `cd 01-auth-service && cat README.md`
+2. **Copier la checklist** : `cat emergent/CHECKLIST.md`
+3. **Utiliser les prompts** : `cat emergent/PROMPTS.md`
+4. **Générer le code** avec Emergent.sh/Cursor
+5. **Tester** : `mvn spring-boot:run`
+6. **Pusher** : GitHub Actions build automatique !
 
 ---
 
-## ✅ Services Spécifiés
+## 🏗️ Stack Technique
 
-### 1. Auth Service (COMPLÉTÉ)
-**Fichier** : [services/01-auth-service.md](./services/01-auth-service.md)  
-**Taille** : 1275 lignes  
-**Sections** :
-- 1. Vue d'ensemble
-- 2. Modèle de données (TypeScript + TypeORM)
-- 3. API REST (18 endpoints)
-- 4. Événements asynchrones Kafka
-- 5. Règles métier
-- 6. Performance et scalabilité
-- 7. Sécurité (JWT RS256, OAuth, rate limiting)
-- 8. Tests (unit, integration, load)
-- 9. Monitoring et logs
-- 10. Configuration (variables d'env)
-- 11. Migration et déploiement
-- 12. Checklist de validation
+**Backend (tous services)** :
+- ☕ Java 21 + Spring Boot 4.0
+- 🔄 Spring WebFlux (Reactive)
+- 🍃 MongoDB 7.0
+- 🔴 Redis 7.0
+- 📨 Kafka 3.6
+- 🐳 Docker Compose (pas de Kubernetes pour MVP)
 
-**Responsabilités** :
-- Authentification (JWT RS256 + OAuth Google/Facebook)
-- Gestion utilisateurs et profils d'apprentissage multi-langues
-- Abonnements (Free/Premium/Enterprise)
-- Vérification email et récupération mot de passe
+**Frontend** :
+- 🅰️ Angular 17+ avec SSR
+- 📞 WebRTC
+
+**Infrastructure** :
+- 🔐 Keycloak 23+ (auth)
+- 🐙 GitHub Actions (CI/CD)
+- 📦 GHCR (images Docker)
 
 ---
 
-### 2-7. Autres Services
-Les spécifications des autres services (lesson, conversation, feedback, gamification, recommendation, api-gateway) sont détaillées dans **SPECIFICATIONS_SUMMARY.md**.
+## 📋 Plan d'Implémentation
 
-Chaque service y dispose de :
-- Description des responsabilités
-- Entités principales avec schémas
-- Endpoints API avec exemples request/response
-- Événements Kafka publiés/consommés
-- Règles métier et algorithmes
-- Quotas par tier
-- Points techniques importants
+### Phase 1 (MVP Core - 4 semaines)
+1. Auth Service (semaines 1-2)
+2. Lesson Service (semaines 2-3)
+3. Conversation Service (semaines 3-4)
+4. API Gateway (semaine 4)
 
----
+### Phase 2 (Feedback IA - 2 semaines)
+### Phase 3 (Gamification - 2 semaines)
 
-## 🏗️ Architecture Microservices
-
-| Service | Port | Base de Données | Statut |
-|---------|------|----------------|--------|
-| auth-service | 3001 | PostgreSQL | ✅ Spécifié |
-| lesson-service | 3002 | PostgreSQL | 📋 Dans SUMMARY |
-| conversation-service | 3003 | PostgreSQL + Redis | 📋 Dans SUMMARY |
-| feedback-service | 3004 | MongoDB + PostgreSQL | 📋 Dans SUMMARY |
-| gamification-service | 3005 | PostgreSQL + Redis | 📋 Dans SUMMARY |
-| recommendation-service | 3006 | PostgreSQL + Redis | 📋 Dans SUMMARY |
-| api-gateway | 3000 | Redis | 📋 Dans SUMMARY |
-
-**Message Queue** : Kafka (tous services)  
-**Storage** : S3 (audio, images)
+Voir [IMPLEMENTATION_ROADMAP.md](./IMPLEMENTATION_ROADMAP.md)
 
 ---
 
-## 🔄 Flux d'Événements Kafka
+## 🐳 Docker Compose
 
-### Topics Principaux
-
+```bash
+cd docker
+docker-compose up -d
 ```
-user.events (auth → gamification, recommendation, notification)
-├── user.registered
-├── user.subscription.upgraded
-├── user.learning_profile.created
-└── user.email.verified
 
-lesson.events (lesson → gamification, recommendation)
-├── lesson.started
-├── lesson.completed
-├── lesson.mastered
-└── skill.acquired
+Services : Keycloak, MongoDB, Redis, Kafka, Auth Service, etc.
 
-conversation.events (conversation → feedback, gamification)
-├── conversation.matched
-├── conversation.started
-├── conversation.completed
-└── conversation.rated
+---
 
-feedback.events (feedback → recommendation, notification)
-└── feedback.report.generated
+## 🧪 Tests
 
-gamification.events (gamification → notification)
-├── xp.awarded
-├── badge.unlocked
-├── level.up
-└── streak.extended
-
-recommendation.events (recommendation → notification)
-├── recommendation.generated
-└── recommendation.completed
+```bash
+mvn test          # Tests unitaires
+mvn verify        # Tests d'intégration (Testcontainers)
+mvn jacoco:report # Coverage
 ```
 
 ---
 
-## 📊 Comparaison des Services
+## 🚀 CI/CD GitHub Actions
 
-### Taille et Complexité
+Voir `github-workflows/auth-service-ci.yml`
 
-| Service | Entités | Endpoints | Events Pub | Events Sub | Complexité |
-|---------|---------|-----------|-----------|-----------|------------|
-| auth-service | 3 | 18 | 4 | 0 | Moyenne |
-| lesson-service | 7 | 15+ | 4 | 2 | Élevée |
-| conversation-service | 3 | 10+ | 4 | 0 | Élevée (WebRTC) |
-| feedback-service | 4 | 6 | 1 | 1 | Très Élevée (IA) |
-| gamification-service | 6 | 12 | 5 | 4 | Moyenne |
-| recommendation-service | 4 | 8 | 2 | 4 | Élevée (ML) |
-| api-gateway | 0 | 3 | 0 | 0 | Moyenne |
-
-### Technologies Spécialisées
-
-| Service | Tech Spécifique |
-|---------|----------------|
-| auth-service | Passport.js, bcrypt, OAuth 2.0 |
-| lesson-service | Spaced repetition (SM-2) |
-| conversation-service | WebRTC, WebSocket, Simple-peer |
-| feedback-service | Whisper (STT), spaCy (NLP), GPT-4 (LLM) |
-| gamification-service | Leaderboards real-time (Redis) |
-| recommendation-service | ML scoring, collaborative filtering |
-| api-gateway | Circuit breaker, rate limiting |
+Auto-build sur push → Tests → Docker image → Push GHCR
 
 ---
 
-## 🎓 Concepts Clés
+## 📞 Contact
 
-### Déblocage Séquentiel (Lesson Service)
-Leçon N+1 débloquée si :
-- Score leçon N ≥ 70%
-- OU skills requis maîtrisés
-
-### Spaced Repetition (Lesson Service)
-Algorithme SM-2 :
-- Score <60% → révision 1 jour
-- Score 60-79% → révision 3 jours
-- Score 80-89% → révision 7 jours
-- Score ≥90% → révision 14 jours
-
-### Matchmaking (Conversation Service)
-Critères :
-1. Même `targetLanguageCode` (obligatoire)
-2. Niveau compatible ±1 (A2 ↔ A1, A2, B1)
-3. Thème identique
-4. Accent préféré (optionnel)
-5. Timeout 2 min → élargir critères
-
-### Attribution XP (Gamification Service)
-```
-xp_earned = base_xp × multiplier
-
-multiplier:
-- 70-79%: 1.0×
-- 80-89%: 1.25×
-- 90-100%: 1.5×
-
-Bonus:
-- First completion: +20%
-- Perfect score: +50%
-- Streak active: +10%
-```
-
-### Scoring Feedback (Feedback Service)
-5 dimensions (0-100) :
-- **Grammar** : % phrases correctes
-- **Vocabulary** : richesse lexicale × niveau
-- **Fluency** : WPM + pauses + fillers
-- **Pronunciation** : comparaison phonétique
-- **Comprehension** : pertinence réponses
-
-**Overall** = weighted average (25%, 20%, 25%, 20%, 10%)
+**Organisation** : [github.com/we-speak-org](https://github.com/we-speak-org)
 
 ---
 
-## 🔐 Standards de Sécurité
-
-### JWT Structure (RS256)
-```json
-{
-  "userId": "uuid",
-  "email": "user@example.com",
-  "subscriptionTier": "premium",
-  "iat": 1736936400,
-  "exp": 1736940000
-}
-```
-
-**Expiration** :
-- Access Token : 1 heure
-- Refresh Token : 30 jours (rotation)
-
-### Rate Limiting (API Gateway)
-| Tier | Req/min | Burst |
-|------|---------|-------|
-| Anonymous | 20 | 30 |
-| Free | 100 | 150 |
-| Premium | 500 | 750 |
-| Enterprise | 2000 | 3000 |
-
----
-
-## 📈 Métriques Importantes
-
-### Performance Targets
-- Response time p95 : <500ms (lecture)
-- Response time p95 : <2s (écriture)
-- Availability : >99.9%
-- Error rate : <0.1%
-
-### Scalabilité
-- 10,000 utilisateurs actifs simultanés
-- 1,000 conversations WebRTC simultanées
-- 100,000 requêtes/minute (pic)
-- 10,000 jobs feedback/jour
-
----
-
-## 🚀 Utilisation de cette Documentation
-
-### Pour les Développeurs Backend
-1. Commencez par [SPECIFICATIONS_SUMMARY.md](./SPECIFICATIONS_SUMMARY.md)
-2. Lisez la section de votre service assigné
-3. Implémentez les entités (TypeORM)
-4. Créez les endpoints API (NestJS controllers)
-5. Implémentez les événements Kafka (producers/consumers)
-6. Écrivez les tests (unit + integration)
-
-### Pour les Développeurs Frontend
-1. Lisez la section "API Gateway" dans SUMMARY
-2. Consultez les endpoints de chaque service
-3. Utilisez les exemples request/response
-4. Intégrez WebSocket pour conversations
-
-### Pour les Architectes
-1. Étudiez l'architecture événementielle (topics Kafka)
-2. Validez les choix techniques (PostgreSQL, Redis, MongoDB)
-3. Revoyez les stratégies de cache
-4. Vérifiez les patterns (circuit breaker, rate limiting)
-
-### Pour les Product Owners
-1. Comprenez les règles métier de chaque service
-2. Validez les quotas Free vs Premium
-3. Priorisez les features selon complexité
-4. Planifiez les sprints (roadmap dans INDEX)
-
----
-
-## 📞 Questions / Feedback
-
-Pour toute question sur les spécifications :
-1. Consultez d'abord [SPECIFICATIONS_SUMMARY.md](./SPECIFICATIONS_SUMMARY.md)
-2. Vérifiez [01-auth-service.md](./services/01-auth-service.md) comme référence
-3. Contactez l'équipe product : product@wespeak.com
-
----
-
-## 🔄 Mises à Jour
-
-**Version actuelle** : 1.0  
-**Dernière mise à jour** : 2025-01-01  
-
-### Changelog
-- **v1.0** (2025-01-01) : Spécifications initiales complètes
-  - Auth Service : fichier complet (1275 lignes)
-  - 6 autres services : spécifiés dans SUMMARY (1109 lignes)
-  - Architecture événementielle Kafka définie
-  - Standards de sécurité établis
-
----
-
-**Prêt à développer WeSpeak ! 🚀**
+**🔥 Prêt à générer avec Emergent.sh !**

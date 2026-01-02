@@ -1,0 +1,231 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "UserProfile",
+  "description": "Profil utilisateur stocké dans MongoDB (collection: user_profiles)",
+  "type": "object",
+  "properties": {
+    "_id": {
+      "type": "string",
+      "description": "MongoDB ObjectId",
+      "pattern": "^[0-9a-fA-F]{24}$"
+    },
+    "keycloakUserId": {
+      "type": "string",
+      "description": "UUID de l'utilisateur dans Keycloak",
+      "format": "uuid"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email de l'utilisateur (synchronisé depuis Keycloak)",
+      "format": "email"
+    },
+    "displayName": {
+      "type": "string",
+      "description": "Nom d'affichage de l'utilisateur",
+      "minLength": 2,
+      "maxLength": 100
+    },
+    "avatarUrl": {
+      "type": ["string", "null"],
+      "description": "URL de l'avatar de l'utilisateur",
+      "format": "uri"
+    },
+    "dateOfBirth": {
+      "type": ["string", "null"],
+      "description": "Date de naissance (ISO 8601)",
+      "format": "date"
+    },
+    "country": {
+      "type": ["string", "null"],
+      "description": "Code pays ISO 3166-1 alpha-2",
+      "pattern": "^[A-Z]{2}$"
+    },
+    "timezone": {
+      "type": "string",
+      "description": "Timezone IANA (ex: Europe/Paris)",
+      "default": "UTC"
+    },
+    "uiLanguageCode": {
+      "type": "string",
+      "description": "Langue de l'interface utilisateur (ISO 639-1)",
+      "pattern": "^[a-z]{2}$",
+      "default": "en"
+    },
+    "subscriptionTier": {
+      "type": "string",
+      "description": "Niveau d'abonnement",
+      "enum": ["free", "premium", "enterprise"],
+      "default": "free"
+    },
+    "subscriptionExpiresAt": {
+      "type": ["string", "null"],
+      "description": "Date d'expiration de l'abonnement premium (ISO 8601)",
+      "format": "date-time"
+    },
+    "subscriptionAutoRenew": {
+      "type": "boolean",
+      "description": "Renouvellement automatique de l'abonnement",
+      "default": false
+    },
+    "emailVerified": {
+      "type": "boolean",
+      "description": "Email vérifié (synchronisé depuis Keycloak)",
+      "default": false
+    },
+    "onboardingCompleted": {
+      "type": "boolean",
+      "description": "Onboarding terminé",
+      "default": false
+    },
+    "onboardingCompletedAt": {
+      "type": ["string", "null"],
+      "description": "Date de complétion de l'onboarding (ISO 8601)",
+      "format": "date-time"
+    },
+    "credits": {
+      "type": "object",
+      "description": "Crédits et quotas de l'utilisateur",
+      "properties": {
+        "conversationsRemaining": {
+          "type": "integer",
+          "description": "Nombre de conversations restantes (free: 3/semaine, premium: illimité)",
+          "minimum": 0
+        },
+        "conversationsResetAt": {
+          "type": "string",
+          "description": "Date de reset des crédits conversations (ISO 8601)",
+          "format": "date-time"
+        },
+        "aiMinutesRemaining": {
+          "type": ["integer", "null"],
+          "description": "Minutes de feedback IA restantes (premium: 30/mois)",
+          "minimum": 0
+        },
+        "premiumFeaturesAccess": {
+          "type": "array",
+          "description": "Fonctionnalités premium accessibles",
+          "items": {
+            "type": "string",
+            "enum": [
+              "advanced_feedback",
+              "custom_challenges",
+              "priority_matchmaking",
+              "offline_mode",
+              "analytics_dashboard"
+            ]
+          }
+        }
+      },
+      "required": ["conversationsRemaining", "conversationsResetAt"]
+    },
+    "preferences": {
+      "type": "object",
+      "description": "Préférences utilisateur",
+      "properties": {
+        "notificationsEnabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "emailDigest": {
+          "type": "string",
+          "enum": ["daily", "weekly", "never"],
+          "default": "weekly"
+        },
+        "theme": {
+          "type": "string",
+          "enum": ["light", "dark", "auto"],
+          "default": "light"
+        },
+        "autoPlayAudio": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "lastLoginAt": {
+      "type": ["string", "null"],
+      "description": "Dernière connexion (ISO 8601)",
+      "format": "date-time"
+    },
+    "createdAt": {
+      "type": "string",
+      "description": "Date de création (ISO 8601)",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "description": "Date de dernière mise à jour (ISO 8601)",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "_id",
+    "keycloakUserId",
+    "email",
+    "displayName",
+    "uiLanguageCode",
+    "subscriptionTier",
+    "emailVerified",
+    "onboardingCompleted",
+    "credits",
+    "preferences",
+    "createdAt",
+    "updatedAt"
+  ],
+  "indexes": [
+    {
+      "name": "keycloakUserId_unique",
+      "keys": { "keycloakUserId": 1 },
+      "unique": true
+    },
+    {
+      "name": "email_unique",
+      "keys": { "email": 1 },
+      "unique": true
+    },
+    {
+      "name": "subscriptionTier_idx",
+      "keys": { "subscriptionTier": 1 }
+    },
+    {
+      "name": "createdAt_desc_idx",
+      "keys": { "createdAt": -1 }
+    }
+  ],
+  "example": {
+    "_id": "507f1f77bcf86cd799439011",
+    "keycloakUserId": "a3b5c7d9-1234-5678-90ab-cdef12345678",
+    "email": "john.doe@example.com",
+    "displayName": "John Doe",
+    "avatarUrl": "https://cdn.wespeak.com/avatars/john123.jpg",
+    "dateOfBirth": "1990-05-15",
+    "country": "FR",
+    "timezone": "Europe/Paris",
+    "uiLanguageCode": "fr",
+    "subscriptionTier": "premium",
+    "subscriptionExpiresAt": "2025-12-31T23:59:59Z",
+    "subscriptionAutoRenew": true,
+    "emailVerified": true,
+    "onboardingCompleted": true,
+    "onboardingCompletedAt": "2025-01-15T10:30:00Z",
+    "credits": {
+      "conversationsRemaining": -1,
+      "conversationsResetAt": "2025-01-22T00:00:00Z",
+      "aiMinutesRemaining": 25,
+      "premiumFeaturesAccess": [
+        "advanced_feedback",
+        "custom_challenges",
+        "priority_matchmaking"
+      ]
+    },
+    "preferences": {
+      "notificationsEnabled": true,
+      "emailDigest": "weekly",
+      "theme": "dark",
+      "autoPlayAudio": true
+    },
+    "lastLoginAt": "2025-01-15T10:00:00Z",
+    "createdAt": "2025-01-01T08:00:00Z",
+    "updatedAt": "2025-01-15T10:30:00Z"
+  }
+}
