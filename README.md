@@ -1,6 +1,15 @@
-# WeSpeak Specifications - Ready for Emergent.sh
+# WeSpeak - Spécifications Techniques
 
-**Spécifications techniques complètes** pour générer le code avec l'IA (Emergent.sh, Cursor, etc.)
+> 📋 **Spécifications techniques détaillées** pour tous les microservices de la plateforme WeSpeak
+
+## 🚀 Quick Start
+
+**Nouveau développeur ?** Commencez ici :
+
+1. 📖 **Lisez** [`DEVELOPMENT_WORKFLOW.md`](./DEVELOPMENT_WORKFLOW.md) - Guide complet du workflow de développement
+2. 🔍 **Consultez** [`IMPLEMENTATION_ROADMAP.md`](./IMPLEMENTATION_ROADMAP.md) - Ordre de développement recommandé
+3. 🛠️ **Utilisez** le [Spring Boot Service Template](https://github.com/we-speak-org/springboot-service-template) pour démarrer un nouveau service
+4. 🤖 **Développez** avec [Emergent.sh](https://emergent.sh) en suivant les checklists fournies
 
 ---
 
