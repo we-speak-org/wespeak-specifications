@@ -1,63 +1,236 @@
-# Auth Service - Spécifications Techniques Détaillées v1.0
+# Auth Service - Spécifications Techniques Détaillées v2.0
 
 ## 📋 Table des Matières
 
 1. [Vue d'Ensemble](#1-vue-densemble)
-2. [Modèle de Données](#2-modèle-de-données)
-3. [API REST](#3-api-rest)
-4. [Événements Asynchrones](#4-événements-asynchrones)
-5. [Règles Métier](#5-règles-métier)
-6. [Performance et Scalabilité](#6-performance-et-scalabilité)
-7. [Sécurité](#7-sécurité)
-8. [Tests](#8-tests)
-9. [Monitoring et Logs](#9-monitoring-et-logs)
-10. [Configuration](#10-configuration)
+2. [Architecture avec Keycloak](#2-architecture-avec-keycloak)
+3. [Modèle de Données](#3-modèle-de-données)
+4. [API REST](#4-api-rest)
+5. [Événements Asynchrones](#5-événements-asynchrones)
+6. [Règles Métier](#6-règles-métier)
+7. [Configuration](#7-configuration)
 
 ---
 
 ## 1. Vue d'Ensemble
 
-### 1.1 Responsabilité Principale
+### 1.1 Responsabilité (Scope Réduit avec Keycloak)
 
-Le **auth-service** est responsable de :
-- **Authentification** : Inscription, connexion, logout, gestion tokens JWT
-- **Gestion des comptes utilisateurs** : CRUD profils utilisateurs
-- **Profils d'apprentissage multi-langues** : Gestion des LearningProfile (une par langue cible)
-- **Abonnements** : Gestion des tiers (Free/Premium/Enterprise)
-- **Vérification email** et récupération mot de passe
+Le **auth-service** est désormais un **service léger** qui gère uniquement :
+- **Profils utilisateurs WeSpeak** : Métadonnées business (avatar, préférences UI, timezone)
+- **Profils d'apprentissage multi-langues** : LearningProfile (une par langue cible)
+- **Gestion des crédits/quotas** : Conversations restantes, accès premium, crédits IA
+- **Synchronisation Keycloak** : Écoute événements Keycloak (user.created, user.updated)
 
-### 1.2 Périmètre Fonctionnel
+**Délégué à Keycloak** :
+- ✅ Inscription / Login / Logout
+- ✅ Gestion mots de passe (reset, change)
+- ✅ OAuth2/OIDC (Google, Facebook)
+- ✅ Tokens JWT (génération, validation, refresh)
+- ✅ Vérification email
+- ✅ MFA (Multi-Factor Authentication)
+- ✅ User federation (LDAP, Active Directory)
 
-**In Scope** :
-- Authentification locale (email/password)
-- OAuth 2.0 (Google, Facebook)
-- JWT avec refresh tokens
-- Profils utilisateurs (infos personnelles, préférences UI)
-- Profils d'apprentissage par langue
-- Gestion abonnements et quotas
+### 1.2 Pourquoi Keycloak ?
 
-**Out of Scope** :
-- Logique de progression pédagogique → `lesson-service`
-- Calcul XP et gamification → `gamification-service`
-- Recommandations → `recommendation-service`
+**Avantages** :
+- 🔐 **Sécurité éprouvée** : Pas besoin de réinventer la roue
+- 🚀 **Time-to-market** : Focus sur business logic, pas sur auth flows
+- 🔧 **Admin UI** : Interface de gestion utilisateurs prête à l'emploi
+- 🌐 **Standards** : OAuth2, OIDC, SAML out-of-the-box
+- 📱 **SSO** : Single Sign-On entre applications
+- 🎭 **Personnalisation** : Thèmes custom pour login pages
 
-### 1.3 Dépendances
+### 1.3 Périmètre Fonctionnel
 
-**Services consommés** :
-- Aucun (service fondation)
+**In Scope (Auth Service)** :
+- Profils utilisateurs WeSpeak (avatar, timezone, preferences)
+- Profils d'apprentissage (targetLanguage, nativeLanguage, level, goals)
+- Gestion crédits (conversations restantes, minutes IA, accès premium)
+- Synchronisation avec Keycloak via événements
+- API CRUD profils pour microservices
 
-**Services consommateurs** :
-- Tous les autres services (via JWT validation)
-- `api-gateway` (authentification centralisée)
+**Out of Scope (Délégué)** :
+- Authentication flows → **Keycloak**
+- Token management → **Keycloak**
+- OAuth2 providers → **Keycloak**
+- Password policies → **Keycloak**
+- Email verification → **Keycloak**
+- Progression pédagogique → **lesson-service**
+- XP et gamification → **gamification-service**
+- Recommandations → **recommendation-service**
 
-**Technologies** :
-- **Runtime** : Node.js 20+ LTS, TypeScript 5+
-- **Framework** : NestJS 10+
-- **Database** : PostgreSQL 15+ (données relationnelles)
-- **Cache** : Redis 7+ (sessions, tokens blacklist)
-- **Message Queue** : Kafka (événements asynchrones)
-- **Auth Library** : Passport.js, bcrypt, jsonwebtoken
-- **Validation** : class-validator, class-transformer
+### 1.4 Technologies
+
+**Stack** :
+- **Framework** : Spring Boot 3.2 (Java 21) avec WebFlux (réactif)
+- **Base de données** : MongoDB (unified stack)
+- **IAM** : Keycloak 23+ (conteneurisé)
+- **Cache** : Redis (profils, crédits temps réel)
+- **Message Queue** : Kafka (événements Keycloak, sync)
+
+---
+
+## 2. Architecture avec Keycloak
+
+### 2.1 Vue d'ensemble
+
+```mermaid
+graph TB
+    subgraph "Frontend"
+        A[Angular App]
+    end
+    
+    subgraph "Authentication Layer (Keycloak)"
+        B[Keycloak Server]
+        B1[User Database]
+        B2[Login Pages]
+        B3[OAuth2 Providers]
+    end
+    
+    subgraph "API Gateway"
+        C[Spring Cloud Gateway]
+        C1[JWT Validator]
+    end
+    
+    subgraph "Auth Service (WeSpeak)"
+        D[REST API]
+        D1[Profile Manager]
+        D2[Credits Manager]
+        D3[Keycloak Event Listener]
+    end
+    
+    subgraph "Data Layer"
+        E[(MongoDB<br/>user_profiles)]
+        F[(Redis<br/>Cache)]
+    end
+    
+    subgraph "Event Bus"
+        G[Kafka Topics]
+    end
+    
+    A -->|1. Login| B
+    B -->|2. JWT Token| A
+    A -->|3. API Call + Token| C
+    C -->|4. Validate JWT| B
+    C -->|5. Forward + User Context| D
+    
+    B -->|Admin Events| G
+    D3 -->|Listen| G
+    D3 -->|Sync Profile| E
+    
+    D1 --> E
+    D2 --> E
+    D1 --> F
+    
+    style B fill:#E1F5FF
+    style D fill:#FFE5B4
+    style E fill:#E8F5E9
+```
+
+### 2.2 Flux d'authentification
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant FE as Frontend
+    participant KC as Keycloak
+    participant GW as API Gateway
+    participant AS as Auth Service
+    participant Mongo as MongoDB
+    
+    Note over U,KC: 1. User Registration
+    U->>FE: Register (email, password, name)
+    FE->>KC: POST /auth/realms/wespeak/protocol/openid-connect/token
+    KC->>KC: Create User in Keycloak DB
+    KC-->>FE: Access Token + Refresh Token
+    
+    KC->>Kafka: Event: USER_CREATED {userId, email, name}
+    Kafka->>AS: Consume USER_CREATED
+    AS->>Mongo: Create WeSpeak Profile
+    Mongo-->>AS: Profile Created
+    
+    Note over U,AS: 2. API Call
+    FE->>GW: GET /api/users/me (Bearer Token)
+    GW->>KC: Validate JWT
+    KC-->>GW: Valid + User Claims
+    GW->>AS: GET /users/{userId}
+    AS->>Mongo: Find User Profile
+    Mongo-->>AS: Profile Data
+    AS-->>GW: Response
+    GW-->>FE: Profile Data
+    FE-->>U: Display Profile
+```
+
+### 2.3 Synchronisation Keycloak ↔ Auth Service
+
+**Keycloak Admin Events** :
+```json
+// Event: USER_CREATED
+{
+  "type": "USER_CREATED",
+  "realmId": "wespeak",
+  "userId": "keycloak-uuid",
+  "details": {
+    "email": "user@example.com",
+    "firstName": "John",
+    "lastName": "Doe",
+    "emailVerified": false
+  },
+  "timestamp": "2025-01-15T10:30:00Z"
+}
+
+// Event: USER_UPDATED
+{
+  "type": "USER_UPDATED",
+  "userId": "keycloak-uuid",
+  "details": {
+    "email": "newemail@example.com"
+  }
+}
+
+// Event: EMAIL_VERIFIED
+{
+  "type": "EMAIL_VERIFIED",
+  "userId": "keycloak-uuid"
+}
+```
+
+**Listener dans Auth Service** :
+```java
+@Service
+public class KeycloakEventListener {
+    
+    @KafkaListener(topics = "keycloak.admin.events", groupId = "auth-service")
+    public void handleKeycloakEvent(KeycloakAdminEvent event) {
+        switch (event.getType()) {
+            case USER_CREATED -> handleUserCreated(event);
+            case USER_UPDATED -> handleUserUpdated(event);
+            case EMAIL_VERIFIED -> handleEmailVerified(event);
+            case USER_DELETED -> handleUserDeleted(event);
+        }
+    }
+    
+    private void handleUserCreated(KeycloakAdminEvent event) {
+        // Create WeSpeak user profile
+        UserProfile profile = new UserProfile();
+        profile.setKeycloakUserId(event.getUserId());
+        profile.setEmail(event.getDetails().get("email"));
+        profile.setDisplayName(
+            event.getDetails().get("firstName") + " " + 
+            event.getDetails().get("lastName")
+        );
+        profile.setEmailVerified(false);
+        profile.setSubscriptionTier(SubscriptionTier.FREE);
+        profile.setCreatedAt(LocalDateTime.now());
+        
+        userProfileRepository.save(profile).subscribe();
+        
+        // Publish event for other services
+        kafkaProducer.publish("user.events", new UserRegisteredEvent(profile));
+    }
+}
+```
 
 ---
 
