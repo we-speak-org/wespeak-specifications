@@ -4,11 +4,9 @@
 
 ```properties
 # Bindings
-spring.cloud.stream.bindings.sessionCompletedPublisher-out-0.destination=conversation.events
+spring.cloud.stream.bindings.sessionEventPublisher-out-0.destination=conversation.events
 spring.cloud.stream.bindings.userEventListener-in-0.destination=user.events
 spring.cloud.stream.bindings.userEventListener-in-0.group=conversation-service
-spring.cloud.stream.bindings.feedbackEventListener-in-0.destination=feedback.events
-spring.cloud.stream.bindings.feedbackEventListener-in-0.group=conversation-service
 ```
 
 ---
@@ -17,25 +15,21 @@ spring.cloud.stream.bindings.feedbackEventListener-in-0.group=conversation-servi
 
 ### Topic: `conversation.events`
 
-#### session.completed
+#### session.started
 
-Publié quand une session de conversation se termine avec succès (durée ≥ 2 minutes).
+Publié quand une session démarre (tous les participants connectés).
 
 ```json
 {
-  "eventType": "session.completed",
+  "eventType": "session.started",
   "version": "1.0",
-  "timestamp": "2026-01-03T10:09:02Z",
+  "timestamp": "2026-01-03T10:00:00Z",
   "payload": {
     "sessionId": "session789",
-    "topicId": "topic123",
     "targetLanguageCode": "en",
-    "participant1Id": "user123",
-    "participant2Id": "user456",
-    "startedAt": "2026-01-03T10:00:00Z",
-    "endedAt": "2026-01-03T10:09:02Z",
-    "actualDurationSeconds": 542,
-    "audioRecordingUrl": "s3://wespeak-audio/sessions/session789.webm"
+    "topicId": "topic123",
+    "participantIds": ["user123", "user456", "user789"],
+    "participantCount": 3
   },
   "metadata": {
     "correlationId": "corr-abc123",
@@ -45,29 +39,78 @@ Publié quand une session de conversation se termine avec succès (durée ≥ 2 
 ```
 
 **Consommé par:**
-- `feedback-service`: Lance l'analyse STT/NLP de l'audio
-- `gamification-service`: Attribue XP aux deux participants
+- `gamification-service`: Initialise le suivi de la session
 
 **Clé de partitionnement:** `sessionId`
 
 ---
 
-#### session.cancelled
+#### session.ended
 
-Publié quand une session est annulée ou abandonnée.
+Publié quand une session se termine.
 
 ```json
 {
-  "eventType": "session.cancelled",
+  "eventType": "session.ended",
   "version": "1.0",
-  "timestamp": "2026-01-03T10:03:00Z",
+  "timestamp": "2026-01-03T10:25:00Z",
   "payload": {
-    "sessionId": "session790",
-    "participant1Id": "user123",
-    "participant2Id": "user456",
-    "cancelledByUserId": "user123",
-    "reason": "dropped",
-    "durationBeforeCancelSeconds": 45
+    "sessionId": "session789",
+    "targetLanguageCode": "en",
+    "topicId": "topic123",
+    "participants": [
+      {
+        "userId": "user123",
+        "speakingTimeSeconds": 450,
+        "joinedAt": "2026-01-03T10:00:00Z",
+        "leftAt": "2026-01-03T10:25:00Z"
+      },
+      {
+        "userId": "user456",
+        "speakingTimeSeconds": 380,
+        "joinedAt": "2026-01-03T10:00:30Z",
+        "leftAt": "2026-01-03T10:25:00Z"
+      }
+    ],
+    "startedAt": "2026-01-03T10:00:00Z",
+    "endedAt": "2026-01-03T10:25:00Z",
+    "durationSeconds": 1500,
+    "endReason": "completed"
+  },
+  "metadata": {
+    "correlationId": "corr-abc123",
+    "source": "conversation-service"
+  }
+}
+```
+
+**Consommé par:**
+- `gamification-service`: Attribue XP aux participants
+- `feedback-service`: Lance l'analyse si enregistrement disponible
+
+**Clé de partitionnement:** `sessionId`
+
+**Raisons de fin (endReason):**
+- `completed`: Fin normale (host a terminé ou tous partis)
+- `timeout`: Durée max atteinte (30 min)
+- `host_ended`: Le host a mis fin manuellement
+
+---
+
+#### participant.joined
+
+Publié quand un participant rejoint une session.
+
+```json
+{
+  "eventType": "participant.joined",
+  "version": "1.0",
+  "timestamp": "2026-01-03T10:00:30Z",
+  "payload": {
+    "sessionId": "session789",
+    "userId": "user456",
+    "role": "participant",
+    "currentParticipantCount": 2
   },
   "metadata": {
     "correlationId": "corr-def456",
@@ -76,30 +119,22 @@ Publié quand une session est annulée ou abandonnée.
 }
 ```
 
-**Raisons possibles:**
-- `dropped`: Déconnexion d'un participant
-- `timeout`: Inactivité prolongée
-- `cancelled`: Annulation volontaire avant le début
-- `reported`: Session signalée pour abus
-
 ---
 
-#### match.found
+#### participant.left
 
-Publié quand deux utilisateurs sont matchés avec succès.
+Publié quand un participant quitte une session.
 
 ```json
 {
-  "eventType": "match.found",
+  "eventType": "participant.left",
   "version": "1.0",
-  "timestamp": "2026-01-03T10:00:00Z",
+  "timestamp": "2026-01-03T10:20:00Z",
   "payload": {
     "sessionId": "session789",
-    "participant1Id": "user123",
-    "participant2Id": "user456",
-    "targetLanguageCode": "en",
-    "topicId": "topic123",
-    "matchDurationMs": 15230
+    "userId": "user789",
+    "speakingTimeSeconds": 280,
+    "remainingParticipantCount": 2
   },
   "metadata": {
     "correlationId": "corr-ghi789",
@@ -116,7 +151,7 @@ Publié quand deux utilisateurs sont matchés avec succès.
 
 #### user.deleted
 
-Quand un utilisateur supprime son compte, nettoyer ses données.
+Quand un utilisateur supprime son compte.
 
 ```json
 {
@@ -127,48 +162,9 @@ Quand un utilisateur supprime son compte, nettoyer ses données.
 }
 ```
 
-**Action:** Supprimer toutes les sessions et enregistrements de l'utilisateur.
-
----
-
-#### user.profile.updated
-
-Quand le profil d'apprentissage change (niveau, langue).
-
-```json
-{
-  "eventType": "user.profile.updated",
-  "payload": {
-    "userId": "user123",
-    "learningProfileId": "profile123",
-    "targetLanguageCode": "en",
-    "newLevel": "B2"
-  }
-}
-```
-
-**Action:** Mettre à jour le cache des niveaux utilisateur.
-
----
-
-### Topic: `feedback.events`
-
-#### feedback.completed
-
-Quand l'analyse d'une session est terminée.
-
-```json
-{
-  "eventType": "feedback.completed",
-  "payload": {
-    "sessionId": "session789",
-    "feedbackId": "feedback123",
-    "overallScore": 75
-  }
-}
-```
-
-**Action:** Associer le feedbackId à la session.
+**Action:** 
+- Supprimer l'historique des participations
+- Anonymiser les références dans les sessions passées
 
 ---
 
@@ -180,22 +176,11 @@ public class ConversationEventListener {
 
     @Bean
     public Consumer<CloudEvent<UserDeletedPayload>> userEventListener(
-            ConversationService conversationService) {
+            ConversationCleanupService cleanupService) {
         return event -> {
             if ("user.deleted".equals(event.getType())) {
-                conversationService.handleUserDeleted(event.getData());
+                cleanupService.handleUserDeleted(event.getData().getUserId());
             }
-        };
-    }
-
-    @Bean
-    public Consumer<CloudEvent<FeedbackCompletedPayload>> feedbackEventListener(
-            SessionService sessionService) {
-        return event -> {
-            sessionService.linkFeedback(
-                event.getData().getSessionId(),
-                event.getData().getFeedbackId()
-            );
         };
     }
 }
@@ -209,4 +194,3 @@ public class ConversationEventListener {
 |-------|-----|--------|
 | conversation.events | sessionId | Tous les événements d'une session sur la même partition |
 | user.events | userId | Cohérence par utilisateur |
-| feedback.events | sessionId | Alignement avec les sessions |

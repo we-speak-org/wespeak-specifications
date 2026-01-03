@@ -7,119 +7,173 @@ erDiagram
     Topic {
         string id PK
         string targetLanguageCode
-        string level
         string title
         string description
-        string[] promptQuestions
+        string[] suggestedQuestions
+        string level
         string category
-        int estimatedDurationMinutes
         boolean isActive
         datetime createdAt
     }
 
-    ConversationSession {
+    Session {
         string id PK
-        string topicId FK
         string targetLanguageCode
-        string participant1Id FK
-        string participant2Id FK
         string status
-        datetime scheduledAt
+        string type
+        string inviteCode
+        string topicId FK
+        string hostUserId
+        int minParticipants
+        int maxParticipants
+        datetime scheduledStartAt
         datetime startedAt
         datetime endedAt
-        int actualDurationSeconds
         string endReason
-        string audioRecordingUrl
         datetime createdAt
     }
 
-    MatchmakingRequest {
+    Participant {
         string id PK
-        string userId FK
-        string learningProfileId
-        string targetLanguageCode
-        string userLevel
-        string preferredTopicId FK
-        int preferredDuration
-        string status
-        string matchedWithUserId
         string sessionId FK
-        datetime createdAt
+        string userId
+        string role
+        string status
+        datetime joinedAt
+        datetime leftAt
+        int speakingTimeSeconds
+    }
+
+    QueueEntry {
+        string id PK
+        string userId
+        string targetLanguageCode
+        string level
+        string preferredTopicCategory
+        datetime joinedQueueAt
         datetime expiresAt
     }
 
-    Topic ||--o{ ConversationSession : "guides"
-    ConversationSession ||--o| MatchmakingRequest : "creates"
+    Topic ||--o{ Session : "guides"
+    Session ||--|{ Participant : "contains"
 ```
 
 ---
 
-## Flux de Matchmaking
+## Flux de Matchmaking (Quick Match)
 
 ```mermaid
 sequenceDiagram
-    participant User1 as Marie (B1)
+    participant U1 as Marie (B1)
+    participant U2 as Jean (B1)
+    participant U3 as Pierre (B2)
     participant API as Conversation API
     participant Redis as Redis Queue
-    participant User2 as Jean (B1)
     participant WS as WebSocket
 
-    User1->>API: POST /matchmaking/join
+    U1->>API: POST /matchmaking/join
     API->>Redis: Add to queue en:B1
-    API-->>User1: { status: pending }
+    API-->>U1: { status: waiting }
     
-    User2->>API: POST /matchmaking/join
+    U2->>API: POST /matchmaking/join
     API->>Redis: Check queue en:B1
     Redis-->>API: Found Marie
     
-    API->>API: Create Session
+    Note over API: 2 users found - create session
+    API->>API: Create Session (waiting)
     API->>Redis: Remove both from queue
     
-    API->>WS: Notify Marie (match-found)
-    API->>WS: Notify Jean (match-found)
+    API->>WS: Notify Marie
+    API->>WS: Notify Jean
+    WS-->>U1: { type: matched, sessionId }
+    WS-->>U2: { type: matched, sessionId }
     
-    WS-->>User1: { type: match-found, isInitiator: true }
-    WS-->>User2: { type: match-found, isInitiator: false }
+    U3->>API: POST /matchmaking/join
+    API->>Redis: Add to queue en:B2
+    Note over U3: Continue waiting...
 ```
 
 ---
 
-## Flux WebRTC Signaling
+## Flux Session Multi-Participants
 
 ```mermaid
 sequenceDiagram
-    participant U1 as Marie (Initiator)
+    participant Host as Marie (Host)
+    participant P1 as Jean
+    participant P2 as Pierre
+    participant API as API
+    participant WS as WebSocket
+
+    Host->>API: POST /sessions (type: private)
+    API-->>Host: { sessionId, inviteCode: "ABC123" }
+    
+    Host->>WS: Connect to session
+    
+    P1->>API: POST /sessions/join { inviteCode }
+    API-->>P1: { sessionId }
+    P1->>WS: Connect to session
+    WS-->>Host: { type: participant-joined, user: Jean }
+    
+    P2->>API: POST /sessions/join { inviteCode }
+    API-->>P2: { sessionId }
+    P2->>WS: Connect to session
+    WS-->>Host: { type: participant-joined, user: Pierre }
+    WS-->>P1: { type: participant-joined, user: Pierre }
+    
+    Host->>API: POST /sessions/{id}/start
+    WS-->>Host: { type: session-started }
+    WS-->>P1: { type: session-started }
+    WS-->>P2: { type: session-started }
+    
+    Note over Host,P2: WebRTC connections established
+    Note over Host,P2: Conversation in progress...
+    
+    P2->>API: POST /sessions/{id}/leave
+    WS-->>Host: { type: participant-left, user: Pierre }
+    WS-->>P1: { type: participant-left, user: Pierre }
+    
+    Host->>API: POST /sessions/{id}/end
+    WS-->>Host: { type: session-ended }
+    WS-->>P1: { type: session-ended }
+```
+
+---
+
+## Flux WebRTC Signaling (Multi-Peers)
+
+```mermaid
+sequenceDiagram
+    participant U1 as Marie
     participant WS as WebSocket Server
-    participant U2 as Jean (Responder)
+    participant U2 as Jean
+    participant U3 as Pierre
 
-    Note over U1,U2: Match found - Marie is initiator
+    Note over U1,U3: Marie creates session, Jean and Pierre join
 
-    U1->>U1: Create RTCPeerConnection
-    U1->>U1: Create Offer SDP
-    U1->>WS: { type: offer, sdp: ... }
-    WS->>U2: { type: offer, sdp: ... }
+    U2->>WS: Connect
+    WS->>U1: { type: participant-joined, userId: Jean }
     
-    U2->>U2: Create RTCPeerConnection
-    U2->>U2: Set Remote Description
-    U2->>U2: Create Answer SDP
-    U2->>WS: { type: answer, sdp: ... }
-    WS->>U1: { type: answer, sdp: ... }
+    Note over U1,U2: Marie initiates connection with Jean
+    U1->>WS: { type: offer, toUserId: Jean, sdp }
+    WS->>U2: { type: offer, fromUserId: Marie, sdp }
+    U2->>WS: { type: answer, toUserId: Marie, sdp }
+    WS->>U1: { type: answer, fromUserId: Jean, sdp }
     
-    U1->>U1: Set Remote Description
+    U3->>WS: Connect
+    WS->>U1: { type: participant-joined, userId: Pierre }
+    WS->>U2: { type: participant-joined, userId: Pierre }
     
-    loop ICE Candidates
-        U1->>WS: { type: ice-candidate, candidate: ... }
-        WS->>U2: { type: ice-candidate, candidate: ... }
-        U2->>WS: { type: ice-candidate, candidate: ... }
-        WS->>U1: { type: ice-candidate, candidate: ... }
-    end
+    Note over U1,U3: Marie initiates connection with Pierre
+    U1->>WS: { type: offer, toUserId: Pierre, sdp }
+    WS->>U3: { type: offer, fromUserId: Marie, sdp }
     
-    Note over U1,U2: P2P Connection Established
+    Note over U2,U3: Jean initiates connection with Pierre
+    U2->>WS: { type: offer, toUserId: Pierre, sdp }
+    WS->>U3: { type: offer, fromUserId: Jean, sdp }
     
-    loop Every 10 seconds
-        U1->>WS: { type: heartbeat }
-        U2->>WS: { type: heartbeat }
-    end
+    Note over U1,U3: ICE candidates exchanged...
+    Note over U1,U3: All P2P connections established
 ```
 
 ---
@@ -128,30 +182,30 @@ sequenceDiagram
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Waiting: Match found
-    Waiting --> Active: Both connected
-    Waiting --> Cancelled: Timeout/Disconnect
+    [*] --> Waiting: Session created
     
-    Active --> Completed: Normal end
-    Active --> Cancelled: Dropped/Reported
+    Waiting --> Active: Host starts OR minParticipants reached
+    Waiting --> Ended: Timeout (5 min) / Host cancels
     
-    Completed --> [*]
-    Cancelled --> [*]
+    Active --> Ended: Host ends / All leave / Timeout (30 min)
+    
+    Ended --> [*]
     
     note right of Waiting
-        Max 30 seconds
-        to establish connection
+        Waiting for participants
+        Private: host decides when to start
+        Public: auto-start at minParticipants
     end note
     
     note right of Active
-        Heartbeat every 10s
-        Max 30 minutes
+        Participants can join/leave
+        Max 6 participants
+        Max 30 minutes duration
     end note
     
-    note right of Completed
-        Duration >= 2 min
-        XP awarded
-        Audio sent for analysis
+    note right of Ended
+        session.ended event published
+        XP awarded to participants
     end note
 ```
 
@@ -175,18 +229,15 @@ flowchart TB
     subgraph Storage
         MONGO[(MongoDB)]
         REDIS[(Redis)]
-        S3[(S3 Audio)]
     end
 
     subgraph Kafka
         TOPIC_CONV[conversation.events]
         TOPIC_USER[user.events]
-        TOPIC_FB[feedback.events]
     end
 
     subgraph OtherServices
         AUTH[Auth Service]
-        FEED[Feedback Service]
         GAMI[Gamification Service]
     end
 
@@ -201,13 +252,9 @@ flowchart TB
     
     MATCH --> REDIS
     
-    API -->|Upload audio| S3
     API -->|Publish| TOPIC_CONV
-    
     TOPIC_USER -->|Consume| API
-    TOPIC_FB -->|Consume| API
     
-    TOPIC_CONV --> FEED
     TOPIC_CONV --> GAMI
     
     API -->|Validate JWT| AUTH
@@ -219,32 +266,29 @@ flowchart TB
 
 ```mermaid
 flowchart TD
-    START[User requests match] --> CHECK{Already in queue?}
-    CHECK -->|Yes| ERROR[Return 409 ALREADY_IN_QUEUE]
+    START[User requests match] --> CHECK{Already in queue<br/>or session?}
+    CHECK -->|Yes| ERROR[Return 409 error]
     CHECK -->|No| ADD[Add to Redis queue]
     
-    ADD --> SCAN[Scan compatible queues]
-    SCAN --> FOUND{Match found?}
+    ADD --> SCAN[Scan compatible users]
+    SCAN --> FOUND{2+ users found?}
     
     FOUND -->|Yes| CREATE[Create Session]
     FOUND -->|No| WAIT[Wait in queue]
     
-    WAIT --> TIMEOUT{Expired?}
-    TIMEOUT -->|Yes| EXPIRE[Return timeout]
+    WAIT --> TIMEOUT{Expired? 2 min}
+    TIMEOUT -->|Yes| EXPIRE[Remove from queue]
     TIMEOUT -->|No| SCAN
     
-    CREATE --> NOTIFY[Notify both users via WebSocket]
-    NOTIFY --> DONE[Return session info]
+    CREATE --> REMOVE[Remove matched from queue]
+    REMOVE --> NOTIFY[Notify via WebSocket]
+    NOTIFY --> DONE[Session waiting for connections]
 
-    subgraph Compatible Queues
-        Q1[Same language]
-        Q2[Same level]
-        Q3[Level - 1]
-        Q4[Level + 1]
+    subgraph Compatibility Rules
+        R1[Same targetLanguageCode]
+        R2[Level difference <= 1]
     end
     
-    SCAN --> Q1
-    SCAN --> Q2
-    SCAN --> Q3
-    SCAN --> Q4
+    SCAN -.-> R1
+    SCAN -.-> R2
 ```

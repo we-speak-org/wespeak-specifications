@@ -1,72 +1,89 @@
-# User Story: Gestion des Sessions
+# User Story: Gestion des Sessions Multi-Participants
 
 ## Contexte
-En tant qu'apprenant, je veux que ma session de conversation soit correctement gérée du début à la fin, avec enregistrement audio et historique consultable.
+En tant qu'apprenant, je veux pouvoir participer à des sessions de conversation avec plusieurs personnes (2 à 6), pour pratiquer dans un contexte plus dynamique et réaliste.
 
 ## Critères d'Acceptation
 
-### AC1: Création de session
-- Une session est créée automatiquement quand un match est trouvé
+### AC1: Création de session publique (via matchmaking)
+- Une session est créée quand le matchmaking trouve 2+ utilisateurs compatibles
 - Statut initial: "waiting"
-- Champs: topicId, targetLanguageCode, participant1Id, participant2Id
+- Type: "public"
+- Champs: targetLanguageCode, topicId (optionnel), hostUserId (premier matché)
 
-### AC2: Démarrage de session
-- Quand les deux participants sont connectés en WebRTC, statut -> "active"
-- startedAt est enregistré
-- Timer démarre côté client
+### AC2: Création de session privée
+- POST /sessions avec type="private" crée une session avec code d'invitation
+- L'utilisateur créateur devient host
+- inviteCode généré automatiquement (6 caractères alphanumériques)
+- maxParticipants configurable (2-6, défaut: 4)
 
-### AC3: Fin de session normale
-- POST /sessions/{sessionId}/end avec reason="completed"
-- endedAt et actualDurationSeconds enregistrés
-- Si durée >= 2 minutes:
-  - Audio uploadé vers S3
-  - Événement session.completed publié
-  - XP calculé et retourné
-- Si durée < 2 minutes:
-  - Session marquée completed mais pas d'XP
+### AC3: Rejoindre une session
+- POST /sessions/join avec inviteCode
+- Vérifie que la session n'est pas pleine (participantCount < maxParticipants)
+- Vérifie que la session est en statut "waiting" ou "active"
+- Crée un Participant avec role="participant", status="waiting"
 
-### AC4: Fin anormale
-- Déconnexion détectée -> status="cancelled", endReason="dropped"
-- Timeout inactivité -> status="cancelled", endReason="timeout"
-- Événement session.cancelled publié
+### AC4: Participants
+- Chaque Participant a: sessionId, userId, role, status, joinedAt, leftAt, speakingTimeSeconds
+- Roles: "host" (créateur), "participant" (autres)
+- Status: "waiting" (pas encore connecté WebRTC), "connected", "disconnected"
 
-### AC5: Historique
+### AC5: Démarrage de session
+- Session publique: démarre automatiquement quand minParticipants atteint
+- Session privée: POST /sessions/{id}/start par le host uniquement
+- startedAt est enregistré, status -> "active"
+
+### AC6: Quitter une session
+- POST /sessions/{id}/leave
+- Met à jour leftAt et speakingTimeSeconds du participant
+- Publie événement participant.left
+- Si c'était le host et session privée -> le plus ancien participant devient host
+
+### AC7: Terminer une session
+- Host peut terminer avec POST /sessions/{id}/end
+- Ou automatiquement si tous les participants sont partis
+- Ou après 30 minutes (timeout)
+- endedAt enregistré, status -> "ended"
+- Événement session.ended publié avec tous les participants et leurs stats
+
+### AC8: Historique
 - GET /sessions/history retourne les sessions de l'utilisateur
-- Pagination avec page et limit
-- Inclut: topicTitle, partnerDisplayName, duration, hasFeedback
+- Inclut: topicTitle, participantCount, duration, status
 
-### AC6: Limites quotidiennes
-- Utilisateur free: max 3 sessions/jour
-- Utilisateur premium: illimité
-- Erreur 403 DAILY_LIMIT_REACHED si dépassé
+### AC9: Limites
+- Max 3 sessions actives simultanées par utilisateur
+- Free tier: max 10 sessions/jour
+- Premium: illimité
+- Erreur 403 si dépassé
 
 ## Tâches Techniques
 
-1. Créer ConversationSession entity avec tous les champs
-2. Créer SessionRepository avec:
-   - findByParticipantAndDateRange (pour compter sessions/jour)
-   - findByParticipantOrderByCreatedAtDesc (historique)
-3. Créer SessionService avec:
-   - createSession(match): Créer la session
-   - startSession(sessionId): Marquer comme active
-   - endSession(sessionId, reason): Terminer proprement
-   - getActiveSession(userId): Session en cours
-   - getHistory(userId, page, limit): Historique paginé
-4. Créer SessionController avec les endpoints REST
-5. Intégrer avec S3 pour upload audio
-6. Publier événements Kafka (session.completed, session.cancelled)
-7. Vérifier limites via auth-service (subscription tier)
-
-## Calcul XP
-```
-Base XP = 30
-Bonus durée = (actualDurationSeconds / 60) * 5  // 5 XP par minute
-Total = Base + Bonus (max 100 XP)
-```
+1. Créer Session document MongoDB
+2. Créer Participant document MongoDB
+3. Créer SessionRepository avec:
+   - findByStatusAndTargetLanguageCode
+   - findByInviteCode
+   - findByHostUserId
+4. Créer ParticipantRepository avec:
+   - findBySessionId
+   - findByUserIdAndLeftAtIsNull (sessions actives)
+   - countByUserIdAndJoinedAtAfter (comptage quotidien)
+5. Créer SessionService avec:
+   - createPublicSession(matchedUserIds, targetLanguageCode)
+   - createPrivateSession(hostUserId, options)
+   - joinSession(inviteCode, userId)
+   - startSession(sessionId, userId) - vérifie host
+   - leaveSession(sessionId, userId)
+   - endSession(sessionId, userId) - vérifie host
+   - getParticipants(sessionId)
+   - getCurrentSession(userId)
+   - getHistory(userId, pagination)
+6. Créer SessionController avec endpoints REST
+7. Publier événements Kafka
 
 ## Definition of Done
-- [ ] CRUD sessions fonctionnel
-- [ ] Upload S3 opérationnel
+- [ ] Sessions multi-participants fonctionnelles
+- [ ] Système host/participant opérationnel
+- [ ] Sessions publiques et privées
 - [ ] Événements Kafka publiés
-- [ ] Limites quotidiennes respectées
 - [ ] Tests d'intégration complets
