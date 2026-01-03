@@ -4,126 +4,154 @@ Base URL: `/api/v1/conversations`
 
 ---
 
-## Topics
+## TimeSlots (Créneaux)
 
-### Lister les topics
+### Lister les créneaux disponibles
 
 ```
-GET /topics?language={code}&level={level}&category={category}
+GET /timeslots?language={code}&level={level}&from={date}&to={date}
 ```
 
 **Query Parameters:**
 - `language` (requis): Code langue (en, fr, es...)
-- `level` (optionnel): Filtre par niveau CECRL
-- `category` (optionnel): Filtre par catégorie
+- `level` (optionnel): Filtre par niveau CECR
+- `from` (optionnel): Date début (défaut: maintenant)
+- `to` (optionnel): Date fin (défaut: +7 jours)
 
 **Réponse 200:**
 ```json
 {
-  "topics": [
+  "timeSlots": [
     {
-      "id": "topic123",
-      "title": "Travel experiences",
-      "description": "Share your best travel memories",
-      "category": "travel",
+      "id": "slot123",
+      "targetLanguageCode": "en",
       "level": "B1",
-      "suggestedQuestions": [
-        "What's the best trip you've ever taken?",
-        "Do you prefer beach or mountain vacations?"
-      ]
+      "startTime": "2026-01-03T14:00:00Z",
+      "durationMinutes": 30,
+      "maxParticipants": 8,
+      "registeredCount": 3,
+      "spotsAvailable": 5
     }
   ],
-  "total": 25
+  "total": 15
 }
 ```
 
 **Exemple curl:**
 ```bash
-curl -X GET "https://api.wespeak.com/api/v1/conversations/topics?language=en&level=B1" \
+curl -X GET "https://api.wespeak.com/api/v1/conversations/timeslots?language=en&level=B1" \
   -H "Authorization: Bearer {token}"
 ```
 
 ---
 
-## Matchmaking (Quick Match)
-
-### Rejoindre la file d'attente
+### Détail d'un créneau
 
 ```
-POST /matchmaking/join
-```
-
-**Body:**
-```json
-{
-  "targetLanguageCode": "en",
-  "level": "B1",
-  "preferredTopicCategory": "travel"
-}
+GET /timeslots/{timeSlotId}
 ```
 
 **Réponse 200:**
 ```json
 {
-  "queueEntryId": "queue-456",
-  "status": "waiting",
-  "estimatedWaitSeconds": 30,
-  "expiresAt": "2026-01-03T10:02:00Z"
+  "id": "slot123",
+  "targetLanguageCode": "en",
+  "level": "B1",
+  "startTime": "2026-01-03T14:00:00Z",
+  "durationMinutes": 30,
+  "maxParticipants": 8,
+  "minParticipants": 2,
+  "registeredCount": 3,
+  "isUserRegistered": false
 }
 ```
 
-**Réponse 409 (déjà en file):**
+---
+
+## Registrations (Inscriptions)
+
+### S'inscrire à un créneau
+
+```
+POST /timeslots/{timeSlotId}/register
+```
+
+**Réponse 201:**
 ```json
 {
-  "error": "ALREADY_IN_QUEUE",
-  "message": "You are already waiting for a match"
+  "registrationId": "reg456",
+  "timeSlotId": "slot123",
+  "status": "registered",
+  "registeredAt": "2026-01-03T10:00:00Z"
+}
+```
+
+**Réponse 409 (déjà inscrit):**
+```json
+{
+  "error": "ALREADY_REGISTERED",
+  "message": "You are already registered for this time slot"
 }
 ```
 
 **Exemple curl:**
 ```bash
-curl -X POST "https://api.wespeak.com/api/v1/conversations/matchmaking/join" \
-  -H "Authorization: Bearer {token}" \
-  -H "Content-Type: application/json" \
-  -d '{"targetLanguageCode":"en","level":"B1"}'
+curl -X POST "https://api.wespeak.com/api/v1/conversations/timeslots/slot123/register" \
+  -H "Authorization: Bearer {token}"
 ```
 
 ---
 
-### Quitter la file d'attente
+### Annuler une inscription
 
 ```
-DELETE /matchmaking/leave
+DELETE /timeslots/{timeSlotId}/register
 ```
 
 **Réponse 200:**
 ```json
 {
-  "message": "Left matchmaking queue"
+  "message": "Registration cancelled"
+}
+```
+
+**Réponse 400:**
+```json
+{
+  "error": "CANCELLATION_TOO_LATE",
+  "message": "Cannot cancel less than 15 minutes before start"
 }
 ```
 
 ---
 
-### Statut du matchmaking
+### Mes inscriptions
 
 ```
-GET /matchmaking/status
+GET /registrations?status={status}
 ```
 
-**Réponse 200 (en attente):**
+**Query Parameters:**
+- `status` (optionnel): registered, cancelled, attended, noshow
+
+**Réponse 200:**
 ```json
 {
-  "status": "waiting",
-  "waitingSeconds": 45
-}
-```
-
-**Réponse 200 (matché):**
-```json
-{
-  "status": "matched",
-  "sessionId": "session789"
+  "registrations": [
+    {
+      "id": "reg456",
+      "timeSlot": {
+        "id": "slot123",
+        "targetLanguageCode": "en",
+        "level": "B1",
+        "startTime": "2026-01-03T14:00:00Z",
+        "durationMinutes": 30
+      },
+      "status": "registered",
+      "registeredAt": "2026-01-03T10:00:00Z"
+    }
+  ],
+  "total": 3
 }
 ```
 
@@ -131,37 +159,7 @@ GET /matchmaking/status
 
 ## Sessions
 
-### Créer une session privée
-
-```
-POST /sessions
-```
-
-**Body:**
-```json
-{
-  "targetLanguageCode": "en",
-  "type": "private",
-  "topicId": "topic123",
-  "maxParticipants": 4
-}
-```
-
-**Réponse 201:**
-```json
-{
-  "id": "session789",
-  "inviteCode": "ABC123",
-  "status": "waiting",
-  "type": "private",
-  "targetLanguageCode": "en",
-  "maxParticipants": 4
-}
-```
-
----
-
-### Rejoindre une session par code
+### Rejoindre la session (quand le créneau commence)
 
 ```
 POST /sessions/join
@@ -170,7 +168,8 @@ POST /sessions/join
 **Body:**
 ```json
 {
-  "inviteCode": "ABC123"
+  "timeSlotId": "slot123",
+  "recordingConsent": true
 }
 ```
 
@@ -179,14 +178,28 @@ POST /sessions/join
 {
   "sessionId": "session789",
   "status": "waiting",
-  "participantCount": 2,
-  "maxParticipants": 4
+  "recordingEnabled": true,
+  "participants": [
+    {
+      "userId": "user123",
+      "displayName": "Marie",
+      "status": "connected"
+    }
+  ]
+}
+```
+
+**Réponse 403:**
+```json
+{
+  "error": "NOT_REGISTERED",
+  "message": "You are not registered for this time slot"
 }
 ```
 
 ---
 
-### Obtenir la session active
+### Session courante
 
 ```
 GET /sessions/current
@@ -197,28 +210,28 @@ GET /sessions/current
 {
   "id": "session789",
   "status": "active",
-  "type": "public",
   "targetLanguageCode": "en",
-  "topic": {
-    "id": "topic123",
-    "title": "Travel experiences"
-  },
+  "level": "B1",
+  "recordingEnabled": true,
   "participants": [
     {
       "userId": "user123",
       "displayName": "Marie",
-      "role": "host",
+      "cameraEnabled": true,
+      "micEnabled": true,
       "status": "connected"
     },
     {
       "userId": "user456",
       "displayName": "Jean",
-      "role": "participant",
+      "cameraEnabled": true,
+      "micEnabled": false,
       "status": "connected"
     }
   ],
-  "startedAt": "2026-01-03T10:00:00Z",
-  "maxDurationSeconds": 1800
+  "startedAt": "2026-01-03T14:00:00Z",
+  "endsAt": "2026-01-03T14:30:00Z",
+  "remainingSeconds": 1200
 }
 ```
 
@@ -232,83 +245,40 @@ GET /sessions/current
 
 ---
 
-### Démarrer une session (host only)
+### Mettre à jour mes contrôles média
 
 ```
-POST /sessions/{sessionId}/start
+PATCH /sessions/current/media
+```
+
+**Body:**
+```json
+{
+  "cameraEnabled": false,
+  "micEnabled": true
+}
 ```
 
 **Réponse 200:**
 ```json
 {
-  "id": "session789",
-  "status": "active",
-  "startedAt": "2026-01-03T10:00:00Z"
+  "cameraEnabled": false,
+  "micEnabled": true
 }
 ```
 
 ---
 
-### Quitter une session
+### Quitter la session
 
 ```
-POST /sessions/{sessionId}/leave
+POST /sessions/current/leave
 ```
 
 **Réponse 200:**
 ```json
 {
   "message": "Left session successfully"
-}
-```
-
----
-
-### Terminer une session (host only)
-
-```
-POST /sessions/{sessionId}/end
-```
-
-**Réponse 200:**
-```json
-{
-  "id": "session789",
-  "status": "ended",
-  "endedAt": "2026-01-03T10:25:00Z",
-  "totalDurationSeconds": 1500
-}
-```
-
----
-
-### Liste des participants
-
-```
-GET /sessions/{sessionId}/participants
-```
-
-**Réponse 200:**
-```json
-{
-  "participants": [
-    {
-      "id": "part-1",
-      "userId": "user123",
-      "displayName": "Marie",
-      "role": "host",
-      "status": "connected",
-      "joinedAt": "2026-01-03T10:00:00Z"
-    },
-    {
-      "id": "part-2",
-      "userId": "user456",
-      "displayName": "Jean",
-      "role": "participant",
-      "status": "connected",
-      "joinedAt": "2026-01-03T10:00:30Z"
-    }
-  ]
 }
 ```
 
@@ -326,56 +296,19 @@ GET /sessions/history?page={page}&limit={limit}
   "sessions": [
     {
       "id": "session789",
-      "topicTitle": "Travel experiences",
       "targetLanguageCode": "en",
-      "participantCount": 3,
-      "startedAt": "2026-01-03T10:00:00Z",
-      "durationSeconds": 1500,
-      "status": "ended"
+      "level": "B1",
+      "participantCount": 4,
+      "startedAt": "2026-01-03T14:00:00Z",
+      "durationSeconds": 1800,
+      "recordingAvailable": true
     }
   ],
   "pagination": {
     "page": 1,
     "limit": 10,
-    "total": 45
+    "total": 25
   }
-}
-```
-
----
-
-### Détail d'une session
-
-```
-GET /sessions/{sessionId}
-```
-
-**Réponse 200:**
-```json
-{
-  "id": "session789",
-  "type": "public",
-  "targetLanguageCode": "en",
-  "status": "ended",
-  "topic": {
-    "id": "topic123",
-    "title": "Travel experiences"
-  },
-  "participants": [
-    {
-      "userId": "user123",
-      "displayName": "Marie",
-      "speakingTimeSeconds": 450
-    },
-    {
-      "userId": "user456",
-      "displayName": "Jean",
-      "speakingTimeSeconds": 380
-    }
-  ],
-  "startedAt": "2026-01-03T10:00:00Z",
-  "endedAt": "2026-01-03T10:25:00Z",
-  "durationSeconds": 1500
 }
 ```
 
@@ -383,7 +316,7 @@ GET /sessions/{sessionId}
 
 ## Signaling WebRTC
 
-Connexion WebSocket pour la signalisation temps réel entre participants.
+Connexion WebSocket pour la signalisation temps réel.
 
 ### Connexion WebSocket
 
@@ -430,7 +363,9 @@ WS /ws/signaling?token={jwt}&sessionId={sessionId}
   "type": "participant-joined",
   "participant": {
     "userId": "user789",
-    "displayName": "Pierre"
+    "displayName": "Pierre",
+    "cameraEnabled": true,
+    "micEnabled": true
   }
 }
 ```
@@ -443,11 +378,13 @@ WS /ws/signaling?token={jwt}&sessionId={sessionId}
 }
 ```
 
-**Session started (serveur → client):**
+**Media state changed (serveur → client):**
 ```json
 {
-  "type": "session-started",
-  "startedAt": "2026-01-03T10:00:00Z"
+  "type": "media-state-changed",
+  "userId": "user456",
+  "cameraEnabled": false,
+  "micEnabled": true
 }
 ```
 
@@ -455,7 +392,7 @@ WS /ws/signaling?token={jwt}&sessionId={sessionId}
 ```json
 {
   "type": "session-ended",
-  "reason": "host_ended"
+  "reason": "time_expired"
 }
 ```
 
@@ -467,12 +404,13 @@ WS /ws/signaling?token={jwt}&sessionId={sessionId}
 |------|--------|-------------|
 | 400 | INVALID_LANGUAGE | Langue non supportée |
 | 400 | INVALID_LEVEL | Niveau CECR invalide |
-| 403 | SESSION_FULL | Session complète (max participants) |
-| 403 | DAILY_LIMIT_REACHED | Limite quotidienne atteinte (free tier) |
-| 403 | NOT_HOST | Action réservée au host |
-| 404 | TOPIC_NOT_FOUND | Topic inexistant |
+| 400 | CANCELLATION_TOO_LATE | Annulation trop tardive |
+| 403 | NOT_REGISTERED | Non inscrit au créneau |
+| 403 | SESSION_FULL | Créneau complet |
+| 403 | DAILY_LIMIT_REACHED | Limite quotidienne atteinte |
+| 404 | TIMESLOT_NOT_FOUND | Créneau inexistant |
 | 404 | SESSION_NOT_FOUND | Session inexistante |
-| 404 | INVALID_INVITE_CODE | Code d'invitation invalide |
-| 409 | ALREADY_IN_QUEUE | Déjà en file d'attente |
-| 409 | ALREADY_IN_SESSION | Déjà en session active |
+| 404 | NO_ACTIVE_SESSION | Pas de session active |
+| 409 | ALREADY_REGISTERED | Déjà inscrit |
+| 409 | ALREADY_IN_SESSION | Déjà en session |
 | 410 | SESSION_ENDED | Session terminée |

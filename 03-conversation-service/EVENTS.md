@@ -17,19 +17,21 @@ spring.cloud.stream.bindings.userEventListener-in-0.group=conversation-service
 
 #### session.started
 
-Publié quand une session démarre (tous les participants connectés).
+Publié quand une session démarre.
 
 ```json
 {
   "eventType": "session.started",
   "version": "1.0",
-  "timestamp": "2026-01-03T10:00:00Z",
+  "timestamp": "2026-01-03T14:00:00Z",
   "payload": {
     "sessionId": "session789",
+    "timeSlotId": "slot123",
     "targetLanguageCode": "en",
-    "topicId": "topic123",
+    "level": "B1",
     "participantIds": ["user123", "user456", "user789"],
-    "participantCount": 3
+    "participantCount": 3,
+    "recordingEnabled": true
   },
   "metadata": {
     "correlationId": "corr-abc123",
@@ -53,29 +55,29 @@ Publié quand une session se termine.
 {
   "eventType": "session.ended",
   "version": "1.0",
-  "timestamp": "2026-01-03T10:25:00Z",
+  "timestamp": "2026-01-03T14:30:00Z",
   "payload": {
     "sessionId": "session789",
+    "timeSlotId": "slot123",
     "targetLanguageCode": "en",
-    "topicId": "topic123",
+    "level": "B1",
     "participants": [
       {
         "userId": "user123",
-        "speakingTimeSeconds": 450,
-        "joinedAt": "2026-01-03T10:00:00Z",
-        "leftAt": "2026-01-03T10:25:00Z"
+        "joinedAt": "2026-01-03T14:00:00Z",
+        "leftAt": "2026-01-03T14:30:00Z",
+        "recordingConsent": true
       },
       {
         "userId": "user456",
-        "speakingTimeSeconds": 380,
-        "joinedAt": "2026-01-03T10:00:30Z",
-        "leftAt": "2026-01-03T10:25:00Z"
+        "joinedAt": "2026-01-03T14:00:30Z",
+        "leftAt": "2026-01-03T14:30:00Z",
+        "recordingConsent": true
       }
     ],
-    "startedAt": "2026-01-03T10:00:00Z",
-    "endedAt": "2026-01-03T10:25:00Z",
-    "durationSeconds": 1500,
-    "endReason": "completed"
+    "startedAt": "2026-01-03T14:00:00Z",
+    "endedAt": "2026-01-03T14:30:00Z",
+    "durationSeconds": 1800
   },
   "metadata": {
     "correlationId": "corr-abc123",
@@ -86,62 +88,48 @@ Publié quand une session se termine.
 
 **Consommé par:**
 - `gamification-service`: Attribue XP aux participants
-- `feedback-service`: Lance l'analyse si enregistrement disponible
 
 **Clé de partitionnement:** `sessionId`
 
-**Raisons de fin (endReason):**
-- `completed`: Fin normale (host a terminé ou tous partis)
-- `timeout`: Durée max atteinte (30 min)
-- `host_ended`: Le host a mis fin manuellement
-
 ---
 
-#### participant.joined
+#### session.recorded
 
-Publié quand un participant rejoint une session.
+Publié quand l'enregistrement audio est disponible sur S3.
 
 ```json
 {
-  "eventType": "participant.joined",
+  "eventType": "session.recorded",
   "version": "1.0",
-  "timestamp": "2026-01-03T10:00:30Z",
+  "timestamp": "2026-01-03T14:31:00Z",
   "payload": {
     "sessionId": "session789",
-    "userId": "user456",
-    "role": "participant",
-    "currentParticipantCount": 2
+    "targetLanguageCode": "en",
+    "level": "B1",
+    "recordingUrl": "s3://wespeak-recordings/2026/01/03/session789.webm",
+    "durationSeconds": 1800,
+    "participantsWithConsent": [
+      {
+        "userId": "user123",
+        "displayName": "Marie"
+      },
+      {
+        "userId": "user456",
+        "displayName": "Jean"
+      }
+    ]
   },
   "metadata": {
-    "correlationId": "corr-def456",
+    "correlationId": "corr-abc123",
     "source": "conversation-service"
   }
 }
 ```
 
----
+**Consommé par:**
+- `feedback-service`: Lance la transcription et l'analyse IA
 
-#### participant.left
-
-Publié quand un participant quitte une session.
-
-```json
-{
-  "eventType": "participant.left",
-  "version": "1.0",
-  "timestamp": "2026-01-03T10:20:00Z",
-  "payload": {
-    "sessionId": "session789",
-    "userId": "user789",
-    "speakingTimeSeconds": 280,
-    "remainingParticipantCount": 2
-  },
-  "metadata": {
-    "correlationId": "corr-ghi789",
-    "source": "conversation-service"
-  }
-}
-```
+**Clé de partitionnement:** `sessionId`
 
 ---
 
@@ -163,8 +151,8 @@ Quand un utilisateur supprime son compte.
 ```
 
 **Action:** 
-- Supprimer l'historique des participations
-- Anonymiser les références dans les sessions passées
+- Supprimer les inscriptions futures
+- Anonymiser les participations passées
 
 ---
 
