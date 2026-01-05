@@ -52,7 +52,7 @@ Le **Feedback Service** est responsable de l'analyse intelligente des performanc
 - `lesson-service` : Mapping erreurs → skills, récupération skills acquis
 - `conversation-service` : Récupération détails sessions
 - **Services IA externes** : 
-  - OpenAI Whisper API (STT)
+  - AssemblyAI (STT)
   - OpenAI GPT-4 / Anthropic Claude (analyse, reformulations)
   - Services NLP spécialisés (LanguageTool, spaCy)
 
@@ -76,7 +76,8 @@ Le **Feedback Service** est responsable de l'analyse intelligente des performanc
 - **Redis** : Cache résultats récents, rate limiting
 
 **Intégrations IA** :
-- **OpenAI Java SDK** : Whisper, GPT-4
+- **AssemblyAI Java SDK** : Transcription audio (STT)
+- **OpenAI Java SDK** : GPT-4 (analyse)
 - **Anthropic Java SDK** : Claude
 - **LanguageTool Java API** : Vérification grammaticale
 - **Apache OpenNLP** / **Stanford NLP** : Analyse linguistique locale
@@ -793,7 +794,7 @@ graph TD
     B --> C[Kafka Queue: feedback.jobs]
     C --> D[Worker: Download & Transcribe All Tracks]
     D --> E[Worker: Merge Transcripts]
-    D --> E[Worker: STT Whisper]
+    D --> E[Worker: STT AssemblyAI]
     E --> F[Worker: Language Detection]
     F --> G[Worker: NLP Analysis]
     G --> H[Worker: Error Detection]
@@ -842,51 +843,46 @@ public class AudioPreprocessor {
 }
 ```
 
-#### Étape 2 : Speech-to-Text (Whisper)
+#### Étape 2 : Speech-to-Text (AssemblyAI)
 
-**Implémentation avec OpenAI Java SDK** :
+**Implémentation avec AssemblyAI Java SDK** :
 ```java
 @ApplicationScoped
 public class SpeechToTextService {
     
     @Inject
-    OpenAIClient openAIClient;
-    
-    @ConfigProperty(name = "openai.whisper.model")
-    String whisperModel; // "whisper-1"
+    AssemblyAIClient assemblyClient;
     
     public Uni<TranscriptionResult> transcribe(
         AudioFile audio, 
         String targetLanguage
     ) {
         return Uni.createFrom().completionStage(() -> 
-            openAIClient.createTranscription(
-                CreateTranscriptionRequest.builder()
-                    .model(whisperModel)
-                    .file(audio.getBytes())
-                    .language(targetLanguage) // ISO 639-1
-                    .responseFormat("verbose_json") // Timestamps
-                    .temperature(0.0) // Deterministic
+            assemblyClient.transcribe(
+                TranscriptionRequest.builder()
+                    .audioUrl(audio.getUrl()) // AssemblyAI peut lire directement depuis URL signée R2
+                    .languageCode(targetLanguage)
+                    .speakerLabels(true) // Support natif diarization si besoin
                     .build()
             )
         ).map(this::parseTranscriptionResponse);
     }
     
     private TranscriptionResult parseTranscriptionResponse(
-        TranscriptionResponse response
+        Transcript response
     ) {
-        List<TranscriptSegment> segments = response.getSegments().stream()
-            .map(s -> new TranscriptSegment(
-                s.getStart(),
-                s.getEnd(),
-                Speaker.USER, // Inféré via diarization si multi-speaker
-                s.getText(),
-                response.getLanguage(),
-                s.getAvgLogprob() // Confidence proxy
+        List<TranscriptSegment> segments = response.getUtterances().stream()
+            .map(u -> new TranscriptSegment(
+                u.getStart() / 1000.0, // ms to seconds
+                u.getEnd() / 1000.0,
+                Speaker.USER, 
+                u.getText(),
+                response.getLanguageCode(),
+                u.getConfidence()
             ))
             .toList();
         
-        return new TranscriptionResult(segments, response.getDuration());
+        return new TranscriptionResult(segments, response.getAudioDuration());
     }
 }
 ```
@@ -1746,11 +1742,9 @@ mp.messaging.outgoing.feedback-events.topic=feedback.events
 quarkus.redis.hosts=redis://redis:6379
 quarkus.redis.password=${REDIS_PASSWORD}
 
-# OpenAI
-openai.api.key=${OPENAI_API_KEY}
-openai.whisper.model=whisper-1
-openai.gpt.model=gpt-4-turbo
-openai.timeout.seconds=120
+# AssemblyAI
+assemblyai.api.key=${ASSEMBLYAI_API_KEY}
+assemblyai.timeout.seconds=300
 
 # Cloudflare R2
 quarkus.s3.endpoint-override=https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
@@ -1780,7 +1774,7 @@ feedback.advanced-nlp.enabled=true
 ## Checklist de validation
 
 - [ ] Pipeline complet testé end-to-end (audio → rapport)
-- [ ] Intégration Whisper API fonctionnelle
+- [ ] Intégration AssemblyAI API fonctionnelle
 - [ ] LanguageTool configuré pour langues supportées
 - [ ] Scores calculés avec formules validées
 - [ ] Événements Kafka publiés à chaque étape

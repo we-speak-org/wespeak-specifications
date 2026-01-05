@@ -97,8 +97,8 @@ sequenceDiagram
     R2-->>FS: Audio data streams
     
     loop For each participant
-        FS->>Whisper: Transcribe audio track
-        Whisper-->>FS: Segments with timestamps
+        FS->>AssemblyAI: Transcribe audio track
+        AssemblyAI-->>FS: Segments with timestamps
     end
 
     FS->>FS: Merge & Sort segments

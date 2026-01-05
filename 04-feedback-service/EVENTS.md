@@ -228,7 +228,7 @@ conversation-service                    feedback-service                    gami
        │                                       │                                    │
        │                                       │ ┌─────────────────────┐            │
        │                                       │ │ 1. Fetch audios R2    │            │
-       │                                       │ │ 2. Transcribe each    │            │
+       │                                       │ │ 2. Call AssemblyAI  │            │
        │                                       │ │ 3. Merge transcripts  │            │
        │                                       │ └─────────────────────┘            │
        │                                       │                                    │

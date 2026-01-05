@@ -139,7 +139,7 @@ Statistiques agrégées des feedbacks d'un utilisateur par langue.
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │  Enregistrement │────▶│  Transcription  │────▶│    Analyse IA   │
-│  Audio (R2)     │     │   (Whisper)     │     │  (Claude/GPT)   │
+│  Audio (R2)     │     │  (AssemblyAI)   │     │  (Claude/GPT)   │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
                                                         │
                                                         ▼
@@ -155,7 +155,7 @@ Statistiques agrégées des feedbacks d'un utilisateur par langue.
 
 **Processus** :
 1. Récupérer les fichiers audio (un par participant) depuis Cloudflare R2
-2. Envoyer chaque fichier à l'API Whisper pour transcription
+2. Envoyer chaque fichier à l'API AssemblyAI pour transcription
 3. Fusionner les segments temporels de tous les participants
 4. Sauvegarder le Transcript unifié en base
 5. Déclencher l'analyse IA

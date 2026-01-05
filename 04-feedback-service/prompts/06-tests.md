@@ -15,7 +15,7 @@ Tu travailles sur le **feedback-service** du projet WeSpeak. Tu dois écrire les
    - Test mise à jour en COMPLETED après transcription
    - Test mise à jour en FAILED après erreurs
    - Test parsing des segments Whisper
-   - Mock du client R2 et Whisper
+   - Mock du client R2 et AssemblyAI
 
 2. **Tests unitaires AnalysisService** :
    - Test génération du prompt
