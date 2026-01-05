@@ -21,7 +21,7 @@ Implémenter la publication et consommation des événements Kafka.
 - **Payload** : sessionId, participants (avec joinedAt, leftAt, recordingConsent), durationSeconds
 
 ### 3. session.recorded
-- **Quand** : Enregistrement uploadé sur S3
+- **Quand** : Enregistrement uploadé sur R2
 - **Topic** : `conversation.events`
 - **Clé** : sessionId
 - **Payload** : sessionId, recordingUrl, targetLanguageCode, level, participantsWithConsent
@@ -57,7 +57,7 @@ public Consumer<CloudEvent<UserDeletedPayload>> userEventListener(
 ## Critères d'acceptation
 - [ ] session.started est publié quand la session devient active
 - [ ] session.ended est publié quand la session se termine
-- [ ] session.recorded est publié après upload S3
+- [ ] session.recorded est publié après upload R2
 - [ ] user.deleted déclenche le nettoyage des données
 
 ## Stack technique

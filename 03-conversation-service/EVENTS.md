@@ -95,7 +95,7 @@ Publié quand une session se termine.
 
 #### session.recorded
 
-Publié quand l'enregistrement audio est disponible sur S3.
+Publié quand l'enregistrement audio est disponible sur R2.
 
 ```json
 {
@@ -106,7 +106,7 @@ Publié quand l'enregistrement audio est disponible sur S3.
     "sessionId": "session789",
     "targetLanguageCode": "en",
     "level": "B1",
-    "recordingUrl": "s3://wespeak-recordings/2026/01/03/session789.webm",
+    "recordingUrl": "r2://wespeak-recordings/2026/01/03/session789.webm",
     "durationSeconds": 1800,
     "participantsWithConsent": [
       {

@@ -18,9 +18,9 @@ Implémenter l'enregistrement audio opt-in et l'envoi au feedback-service.
 - Format : WebM ou MP3
 - Qualité : suffisante pour transcription (16kHz mono minimum)
 
-### 3. Upload S3
-- À la fin de la session, uploader l'enregistrement vers S3
-- Chemin : `s3://wespeak-recordings/{year}/{month}/{day}/{sessionId}.webm`
+### 3. Upload Cloudflare R2
+- À la fin de la session, uploader l'enregistrement vers R2
+- Chemin : `r2://wespeak-recordings/{year}/{month}/{day}/{sessionId}.webm`
 - Générer une URL signée (expiration 24h)
 
 ### 4. Événement Kafka
@@ -39,11 +39,11 @@ Implémenter l'enregistrement audio opt-in et l'envoi au feedback-service.
 ## Critères d'acceptation
 - [ ] Le consentement est collecté à la connexion
 - [ ] L'enregistrement démarre si au moins 1 consentement
-- [ ] L'audio est uploadé vers S3 à la fin de session
+- [ ] L'audio est uploadé vers R2 à la fin de session
 - [ ] L'événement session.recorded est publié
 - [ ] Les enregistrements sont supprimés après 30 jours
 
 ## Stack technique
 - Spring Boot 4
-- AWS SDK pour S3
+- AWS SDK pour S3 (compatible R2)
 - Spring Cloud Stream pour Kafka

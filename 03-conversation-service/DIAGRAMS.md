@@ -107,7 +107,7 @@ sequenceDiagram
     
     WS-->>U1: { type: session-ended }
     WS-->>U2: { type: session-ended }
-    API->>DB: Upload recording to S3
+    API->>DB: Upload recording to R2
     API->>API: Publish session.recorded event
 ```
 
@@ -181,7 +181,7 @@ stateDiagram-v2
     
     note right of Ended
         session.ended event published
-        If recording: upload to S3
+        If recording: upload to R2
         session.recorded event published
     end note
 ```
@@ -205,7 +205,7 @@ flowchart TB
 
     subgraph Storage
         MONGO[(MongoDB)]
-        S3[(S3 Recordings)]
+        R2[(Cloudflare R2)]
     end
 
     subgraph Kafka
@@ -223,7 +223,7 @@ flowchart TB
     APP <-->|WebSocket| WS
     
     API --> MONGO
-    REC --> S3
+    REC --> R2
     
     SCHED -->|Create slots| MONGO
     
@@ -253,7 +253,7 @@ flowchart TD
     END -->|Non| CAPTURE
     END -->|Oui| FINALIZE[Finaliser le fichier]
     
-    FINALIZE --> UPLOAD[Upload vers S3]
+    FINALIZE --> UPLOAD[Upload vers R2]
     UPLOAD --> EVENT[Publier session.recorded]
     EVENT --> FEEDBACK[Feedback Service transcrit et analyse]
     

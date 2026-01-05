@@ -51,7 +51,7 @@ Session de conversation créée pour un créneau.
   startedAt?: Date;              // Début effectif
   endedAt?: Date;                // Fin de la session
   recordingEnabled: boolean;     // Enregistrement actif
-  recordingUrl?: string;         // URL S3 de l'enregistrement
+  recordingUrl?: string;         // URL R2 de l'enregistrement
   createdAt: Date;
   updatedAt: Date;
 }

@@ -77,7 +77,7 @@ Une session représente une conversation entre deux apprenants.
 | endedAt | DateTime | Non | Fin de la session |
 | actualDurationSeconds | Integer | Non | Durée réelle en secondes |
 | endReason | String | Non | Raison fin: completed, dropped, timeout, reported |
-| audioRecordingUrl | String | Non | URL S3 de l'enregistrement |
+| audioRecordingUrl | String | Non | URL R2 de l'enregistrement |
 | createdAt | DateTime | Oui | Date de création |
 
 ### 2.3 MatchmakingRequest
@@ -154,7 +154,7 @@ Une fois le match établi, une session de conversation démarre.
 **Fin normale :**
 1. Un participant clique "Terminer"
 2. L'autre est notifié et la session se termine
-3. L'audio est uploadé vers S3
+3. L'audio est uploadé vers R2
 4. Événement envoyé au feedback-service pour analyse
 5. XP attribué via gamification-service
 

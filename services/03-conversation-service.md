@@ -34,7 +34,7 @@ Le **Conversation Service** gère les conversations orales en temps réel entre 
 - WebRTC signaling (SDP exchange, ICE candidates)
 - Gestion du cycle de vie des sessions
 - Topics de conversation structurés par niveau
-- Enregistrement audio automatique (S3)
+- Enregistrement audio automatique (Cloudflare R2)
 - Ratings et feedback post-conversation
 
 **Hors périmètre** :
@@ -48,7 +48,7 @@ Le **Conversation Service** gère les conversations orales en temps réel entre 
 - `auth-service` : Validation JWT, récupération profils d'apprentissage
 - `gamification-service` : Attribution XP post-conversation
 - `feedback-service` : Déclenchement analyse audio
-- `storage-service` : Upload enregistrements audio (S3)
+- `storage-service` : Upload enregistrements audio (R2)
 
 **Services appelant** :
 - `api-gateway` : Toutes les requêtes frontend
@@ -62,7 +62,7 @@ Le **Conversation Service** gère les conversations orales en temps réel entre 
 - **Database** : PostgreSQL (sessions, ratings)
 - **Cache** : Redis (matchmaking queue, sessions actives)
 - **Message Queue** : Kafka (événements conversations)
-- **Storage** : S3 (enregistrements audio)
+- **Storage** : Cloudflare R2 (enregistrements audio)
 - **Real-time** : Redis Pub/Sub (coordination multi-instances)
 
 ---
@@ -132,7 +132,7 @@ interface ConversationSession {
   endedAt?: Date;
   durationSeconds: number;
 
-  recordingUrl?: string; // URL enregistrement complet S3
+  recordingUrl?: string; // URL enregistrement complet R2
   transcriptId?: string; // UUID du transcript (feedback-service)
 
   qualityRating?: [{
@@ -912,8 +912,8 @@ function selectNextPrompt(session: ConversationSession): string {
 **Process** :
 1. Frontend enregistre via MediaRecorder API (format: WebM Opus)
 2. Chunks envoyés en stream pendant conversation (WebSocket binary)
-3. Backend assemble et upload vers S3
-4. URL S3 ajouté à `session.recordingUrl`
+3. Backend assemble et upload vers R2
+4. URL R2 ajouté à `session.recordingUrl`
 5. Event Kafka `conversation.completed` déclenche analyse (feedback-service)
 
 **Consentement** :
@@ -1110,7 +1110,7 @@ describe('MatchmakingService', () => {
 - `websocket_connections_active` : Gauge
 - `websocket_messages_total{type}` : Counter
 - `redis_queue_size{language}` : Gauge
-- `s3_upload_duration_seconds` : Histogram
+- `r2_upload_duration_seconds` : Histogram
 
 ### 10.2 Logs applicatifs
 
@@ -1119,7 +1119,7 @@ describe('MatchmakingService', () => {
 **Niveaux** :
 - `INFO` : Match found, conversation started/completed, prompts displayed
 - `WARN` : Match timeout, session aborted, recording failed
-- `ERROR` : WebSocket errors, Redis failures, S3 upload errors
+- `ERROR` : WebSocket errors, Redis failures, R2 upload errors
 
 **Exemple** :
 ```json
@@ -1193,12 +1193,12 @@ TURN_USERNAME=***
 TURN_CREDENTIAL=***
 STUN_SERVER_URL=stun:stun.wespeak.com:3478
 
-# Storage (S3)
-S3_BUCKET=wespeak-recordings
-S3_REGION=us-east-1
-S3_ACCESS_KEY=***
-S3_SECRET_KEY=***
-S3_RECORDINGS_PREFIX=sessions/
+# Storage (Cloudflare R2)
+R2_BUCKET_NAME=wespeak-recordings
+R2_ACCOUNT_ID=***
+R2_ACCESS_KEY=***
+R2_SECRET_KEY=***
+R2_RECORDINGS_PREFIX=sessions/
 
 # Auth
 JWT_PUBLIC_KEY=***
@@ -1242,7 +1242,7 @@ RECORDING_RETENTION_DAYS=30
 
 - [ ] Algorithme matchmaking testé avec divers scénarios
 - [ ] WebSocket signaling functional avec 2 clients simulés
-- [ ] Enregistrements audio uploadés correctement vers S3
+- [ ] Enregistrements audio uploadés correctement vers R2
 - [ ] Events Kafka publiés à chaque étape critique
 - [ ] JWT validation sur tous endpoints REST
 - [ ] WebSocket authentication avant join
