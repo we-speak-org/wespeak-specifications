@@ -160,7 +160,7 @@ L'**enregistrement** capture l'audio de la session pour analyse ultérieure.
 | startedAt | DateTime | Non | Heure de début effective |
 | endedAt | DateTime | Non | Heure de fin |
 | recordingEnabled | Boolean | Oui | Enregistrement actif |
-| recordingUrl | String | Non | URL R2 de l'enregistrement |
+| recordings | Array | Non | Liste des enregistrements par participant |
 | createdAt | DateTime | Oui | Date de création |
 
 ### 4.4 Participant
@@ -235,7 +235,7 @@ L'**enregistrement** capture l'audio de la session pour analyse ultérieure.
 ```
 1. Session démarre → recording initialisé si consentement
 2. Audio mixé en temps réel (côté serveur ou client)
-3. Session termine → fichier uploadé sur R2
+3. Session termine → fichiers uploadés sur R2 (1 par participant)
 4. Événement envoyé au feedback-service avec URL
 5. Feedback-service transcrit et analyse
 6. Résultat stocké et notifié à l'utilisateur

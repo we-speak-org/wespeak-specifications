@@ -106,7 +106,18 @@ Publié quand l'enregistrement audio est disponible sur R2.
     "sessionId": "session789",
     "targetLanguageCode": "en",
     "level": "B1",
-    "recordingUrl": "r2://wespeak-recordings/2026/01/03/session789.webm",
+    "recordings": [
+      {
+        "userId": "user123",
+        "url": "r2://wespeak-recordings/2026/01/03/session789_user123.webm",
+        "startTime": "2026-01-03T14:00:00Z"
+      },
+      {
+        "userId": "user456",
+        "url": "r2://wespeak-recordings/2026/01/03/session789_user456.webm",
+        "startTime": "2026-01-03T14:00:00Z"
+      }
+    ],
     "durationSeconds": 1800,
     "participantsWithConsent": [
       {

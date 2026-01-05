@@ -30,7 +30,13 @@ Déclenche le pipeline de transcription quand un enregistrement est uploadé.
     "sessionId": "session-uuid-456",
     "participantId": "user-uuid-789",
     "targetLanguageCode": "en",
-    "audioUrl": "r2://wespeak-recordings/session-uuid/user-uuid.webm",
+    "recordings": [
+      {
+        "userId": "user-uuid-789",
+        "url": "r2://wespeak-recordings/session-uuid/user-uuid.webm",
+        "startTime": "2025-01-15T10:30:00Z"
+      }
+    ],
     "duration": 125,
     "format": "webm",
     "size": 2500000
@@ -221,9 +227,9 @@ conversation-service                    feedback-service                    gami
        ├──────────────────────────────────────▶│                                    │
        │                                       │                                    │
        │                                       │ ┌─────────────────────┐            │
-       │                                       │ │ 1. Fetch audio R2   │            │
-       │                                       │ │ 2. Call Whisper API │            │
-       │                                       │ │ 3. Save Transcript  │            │
+       │                                       │ │ 1. Fetch audios R2    │            │
+       │                                       │ │ 2. Transcribe each    │            │
+       │                                       │ │ 3. Merge transcripts  │            │
        │                                       │ └─────────────────────┘            │
        │                                       │                                    │
        │                                       │  transcript.completed              │

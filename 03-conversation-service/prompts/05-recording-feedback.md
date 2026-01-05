@@ -19,14 +19,14 @@ Implémenter l'enregistrement audio opt-in et l'envoi au feedback-service.
 - Qualité : suffisante pour transcription (16kHz mono minimum)
 
 ### 3. Upload Cloudflare R2
-- À la fin de la session, uploader l'enregistrement vers R2
-- Chemin : `r2://wespeak-recordings/{year}/{month}/{day}/{sessionId}.webm`
+- À la fin de la session, uploader un fichier audio par participant vers R2
+- Chemin : `r2://wespeak-recordings/{year}/{month}/{day}/{sessionId}_{userId}.webm`
 - Générer une URL signée (expiration 24h)
 
 ### 4. Événement Kafka
 - Publier `session.recorded` avec :
   - sessionId
-  - recordingUrl
+  - recordings (liste: userId, url, startTime)
   - targetLanguageCode
   - level
   - durationSeconds
@@ -39,7 +39,7 @@ Implémenter l'enregistrement audio opt-in et l'envoi au feedback-service.
 ## Critères d'acceptation
 - [ ] Le consentement est collecté à la connexion
 - [ ] L'enregistrement démarre si au moins 1 consentement
-- [ ] L'audio est uploadé vers R2 à la fin de session
+- [ ] Les fichiers audio (un par participant) sont uploadés vers R2
 - [ ] L'événement session.recorded est publié
 - [ ] Les enregistrements sont supprimés après 30 jours
 

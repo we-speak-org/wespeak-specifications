@@ -35,7 +35,7 @@ erDiagram
         datetime startedAt
         datetime endedAt
         boolean recordingEnabled
-        string recordingUrl
+        string recordings "Array of {userId, url, startTime}"
         datetime createdAt
     }
 
@@ -107,7 +107,7 @@ sequenceDiagram
     
     WS-->>U1: { type: session-ended }
     WS-->>U2: { type: session-ended }
-    API->>DB: Upload recording to R2
+    API->>DB: Upload recordings to R2 (one per user)
     API->>API: Publish session.recorded event
 ```
 

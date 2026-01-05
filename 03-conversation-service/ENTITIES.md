@@ -51,7 +51,11 @@ Session de conversation créée pour un créneau.
   startedAt?: Date;              // Début effectif
   endedAt?: Date;                // Fin de la session
   recordingEnabled: boolean;     // Enregistrement actif
-  recordingUrl?: string;         // URL R2 de l'enregistrement
+  recordings?: [{                // Liste des enregistrements
+    userId: string;
+    url: string;                 // URL R2
+    startTime: Date;             // Timestamp synchronisation
+  }];
   createdAt: Date;
   updatedAt: Date;
 }

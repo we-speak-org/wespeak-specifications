@@ -93,11 +93,15 @@ sequenceDiagram
     Kafka->>FS: Consume event
     
     FS->>FS: Create Transcript (PENDING)
-    FS->>R2: Fetch audio file
-    R2-->>FS: Audio data
+    FS->>R2: Fetch audio files (parallel)
+    R2-->>FS: Audio data streams
     
-    FS->>Whisper: Transcribe audio
-    Whisper-->>FS: Transcription + segments
+    loop For each participant
+        FS->>Whisper: Transcribe audio track
+        Whisper-->>FS: Segments with timestamps
+    end
+
+    FS->>FS: Merge & Sort segments
     
     FS->>FS: Save Transcript (COMPLETED)
     FS->>Kafka: transcript.completed

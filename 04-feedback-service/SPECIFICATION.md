@@ -154,10 +154,10 @@ Statistiques agrégées des feedbacks d'un utilisateur par langue.
 **Déclencheur** : Événement `recording.uploaded` reçu de conversation-service
 
 **Processus** :
-1. Récupérer le fichier audio depuis Cloudflare R2
-2. Envoyer à l'API Whisper pour transcription
-3. Parser la réponse et créer les segments temporels
-4. Sauvegarder le Transcript en base
+1. Récupérer les fichiers audio (un par participant) depuis Cloudflare R2
+2. Envoyer chaque fichier à l'API Whisper pour transcription
+3. Fusionner les segments temporels de tous les participants
+4. Sauvegarder le Transcript unifié en base
 5. Déclencher l'analyse IA
 
 **Langues supportées** : Toutes les langues supportées par Whisper

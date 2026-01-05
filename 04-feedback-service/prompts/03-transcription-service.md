@@ -24,7 +24,7 @@ Tu travailles sur le **feedback-service** du projet WeSpeak. Tu dois implémente
    - `sessionId` : String
    - `participantId` : String
    - `targetLanguageCode` : String
-   - `audioUrl` : String (URL R2)
+   - `recordings` : List<{userId, url, startTime}>
    - `duration` : Integer
    - `format` : String
 
@@ -35,10 +35,12 @@ Tu travailles sur le **feedback-service** du projet WeSpeak. Tu dois implémente
 4. **Implémenter le pipeline de transcription** :
    ```
    1. Créer un Transcript en status PENDING
-   2. Télécharger l'audio depuis Cloudflare R2
-   3. Appeler l'API Whisper
-   4. Parser la réponse (segments, confidence)
-   5. Mettre à jour le Transcript en COMPLETED
+   2. Pour chaque enregistrement :
+      a. Télécharger l'audio depuis R2
+      b. Appeler Whisper API
+      c. Récupérer les segments
+   3. Fusionner et trier tous les segments par timestamp
+   4. Mettre à jour le Transcript en COMPLETED
    6. Publier l'événement transcript.completed
    7. Déclencher l'analyse IA
    ```

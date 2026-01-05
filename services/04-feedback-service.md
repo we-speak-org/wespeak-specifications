@@ -116,7 +116,7 @@ public class ConversationTranscript {
     
     private List<TranscriptSegment> segments;
     
-    private String audioUrl; // URL R2 de l'enregistrement
+    private List<Recording> recordings; // Liste des enregistrements par participant
     
     private AudioMetadata audioMetadata;
     
@@ -660,7 +660,10 @@ public record AggregatedProgress(
     "sessionId": "uuid",
     "userId": "uuid",
     "targetLanguageCode": "en",
-    "audioUrl": "r2://wespeak-recordings/session-uuid.webm",
+    "recordings": [
+        { "userId": "u1", "url": "r2://...", "startTime": "..." },
+        { "userId": "u2", "url": "r2://...", "startTime": "..." }
+    ],
     "estimatedDurationSeconds": 120
   },
   "metadata": {
@@ -788,7 +791,8 @@ public record AggregatedProgress(
 graph TD
     A[Event: conversation.completed] --> B[Create Transcript Record]
     B --> C[Kafka Queue: feedback.jobs]
-    C --> D[Worker: Audio Download R2]
+    C --> D[Worker: Download & Transcribe All Tracks]
+    D --> E[Worker: Merge Transcripts]
     D --> E[Worker: STT Whisper]
     E --> F[Worker: Language Detection]
     F --> G[Worker: NLP Analysis]
@@ -812,9 +816,9 @@ public class AudioPreprocessor {
     @Inject
     S3Client s3Client;
     
-    public Uni<AudioFile> downloadAndPreprocess(String audioUrl) {
-        return Uni.createFrom().item(() -> {
-            // Download from R2
+    public Uni<List<TranscriptSegment>> processRecordings(List<Recording> recordings) {
+            // Download & Transcribe each track
+            // Merge segments by timestamp
             GetObjectRequest request = GetObjectRequest.builder()
                 .bucket(extractBucket(audioUrl))
                 .key(extractKey(audioUrl))

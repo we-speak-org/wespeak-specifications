@@ -34,7 +34,7 @@ Le **Conversation Service** gère les conversations orales en temps réel entre 
 - WebRTC signaling (SDP exchange, ICE candidates)
 - Gestion du cycle de vie des sessions
 - Topics de conversation structurés par niveau
-- Enregistrement audio automatique (Cloudflare R2)
+- Enregistrement audio multi-pistes (Cloudflare R2)
 - Ratings et feedback post-conversation
 
 **Hors périmètre** :
@@ -132,7 +132,7 @@ interface ConversationSession {
   endedAt?: Date;
   durationSeconds: number;
 
-  recordingUrl?: string; // URL enregistrement complet R2
+  recordings?: { userId: string; url: string; startTime: Date }[]; // URLs R2 par participant
   transcriptId?: string; // UUID du transcript (feedback-service)
 
   qualityRating?: [{
@@ -912,8 +912,8 @@ function selectNextPrompt(session: ConversationSession): string {
 **Process** :
 1. Frontend enregistre via MediaRecorder API (format: WebM Opus)
 2. Chunks envoyés en stream pendant conversation (WebSocket binary)
-3. Backend assemble et upload vers R2
-4. URL R2 ajouté à `session.recordingUrl`
+3. Backend upload chaque flux participant vers R2
+4. URLs R2 ajoutées à `session.recordings`
 5. Event Kafka `conversation.completed` déclenche analyse (feedback-service)
 
 **Consentement** :
