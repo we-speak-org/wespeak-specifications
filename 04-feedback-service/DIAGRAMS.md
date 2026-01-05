@@ -84,7 +84,7 @@ sequenceDiagram
     participant CS as Conversation Service
     participant Kafka as Kafka
     participant FS as Feedback Service
-    participant S3 as S3 Storage
+    participant R2 as Cloudflare R2
     participant Whisper as Whisper API
     participant LLM as Claude/GPT API
     participant GS as Gamification Service
@@ -93,8 +93,8 @@ sequenceDiagram
     Kafka->>FS: Consume event
     
     FS->>FS: Create Transcript (PENDING)
-    FS->>S3: Fetch audio file
-    S3-->>FS: Audio data
+    FS->>R2: Fetch audio file
+    R2-->>FS: Audio data
     
     FS->>Whisper: Transcribe audio
     Whisper-->>FS: Transcription + segments
@@ -158,7 +158,7 @@ sequenceDiagram
 ```mermaid
 flowchart TB
     subgraph External["Services Externes"]
-        S3[(S3 Storage)]
+        R2[(Cloudflare R2)]
         Whisper[Whisper API]
         LLM[Claude/GPT API]
     end
@@ -184,13 +184,13 @@ flowchart TB
         GamService[Gamification Service]
     end
 
-    ConvService -->|upload| S3
+    ConvService -->|upload| R2
     ConvService -->|publish| RecordingTopic
     
     RecordingTopic -->|consume| Listener
     Listener --> TranscriptionSvc
     
-    TranscriptionSvc -->|fetch audio| S3
+    TranscriptionSvc -->|fetch audio| R2
     TranscriptionSvc -->|transcribe| Whisper
     TranscriptionSvc -->|save| Repository
     TranscriptionSvc -->|publish| TranscriptTopic

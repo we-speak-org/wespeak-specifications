@@ -24,7 +24,7 @@ Tu travailles sur le **feedback-service** du projet WeSpeak. Tu dois implémente
    - `sessionId` : String
    - `participantId` : String
    - `targetLanguageCode` : String
-   - `audioUrl` : String (URL S3)
+   - `audioUrl` : String (URL R2)
    - `duration` : Integer
    - `format` : String
 
@@ -35,7 +35,7 @@ Tu travailles sur le **feedback-service** du projet WeSpeak. Tu dois implémente
 4. **Implémenter le pipeline de transcription** :
    ```
    1. Créer un Transcript en status PENDING
-   2. Télécharger l'audio depuis S3
+   2. Télécharger l'audio depuis Cloudflare R2
    3. Appeler l'API Whisper
    4. Parser la réponse (segments, confidence)
    5. Mettre à jour le Transcript en COMPLETED
@@ -43,7 +43,7 @@ Tu travailles sur le **feedback-service** du projet WeSpeak. Tu dois implémente
    7. Déclencher l'analyse IA
    ```
 
-5. **Créer un client S3** simplifié :
+5. **Créer un client R2 (S3 compatible)** simplifié :
    - `downloadFile(String url)` : byte[]
 
 6. **Créer un client Whisper** :
@@ -63,7 +63,7 @@ Tu travailles sur le **feedback-service** du projet WeSpeak. Tu dois implémente
 
 - [ ] Le listener Kafka reçoit les événements recording.uploaded
 - [ ] Le Transcript est créé et mis à jour correctement
-- [ ] L'audio est récupéré depuis S3
+- [ ] L'audio est récupéré depuis Cloudflare R2
 - [ ] L'API Whisper est appelée correctement
 - [ ] Les segments sont parsés et sauvegardés
 - [ ] Les événements sont publiés sur Kafka

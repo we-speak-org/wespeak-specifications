@@ -28,7 +28,7 @@ Le **feedback-service** est responsable de l'analyse et du feedback IA sur les p
 | **conversation-service** | Consomme événements | Reçoit les enregistrements audio à analyser |
 | **auth-service** | Appel API | Récupère les profils d'apprentissage des utilisateurs |
 | **gamification-service** | Publie événements | Notifie les XP gagnés suite aux feedbacks |
-| **S3** | Stockage | Récupère les fichiers audio à transcrire |
+| **Cloudflare R2** | Stockage | Récupère les fichiers audio à transcrire |
 | **Whisper API** | Externe | Transcription Speech-to-Text |
 | **LLM (Claude/GPT)** | Externe | Analyse linguistique et génération de conseils |
 
@@ -37,7 +37,7 @@ Le **feedback-service** est responsable de l'analyse et du feedback IA sur les p
 - **Spring Boot 4** avec Java 21
 - **MongoDB** pour le stockage des transcripts et feedbacks
 - **Kafka** pour la communication événementielle
-- **S3** pour récupérer les fichiers audio
+- **Cloudflare R2** pour récupérer les fichiers audio
 - **Whisper API** pour la transcription
 - **Claude/GPT API** pour l'analyse IA
 
@@ -139,7 +139,7 @@ Statistiques agrégées des feedbacks d'un utilisateur par langue.
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │  Enregistrement │────▶│  Transcription  │────▶│    Analyse IA   │
-│  Audio (S3)     │     │   (Whisper)     │     │  (Claude/GPT)   │
+│  Audio (R2)     │     │   (Whisper)     │     │  (Claude/GPT)   │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
                                                         │
                                                         ▼
@@ -154,7 +154,7 @@ Statistiques agrégées des feedbacks d'un utilisateur par langue.
 **Déclencheur** : Événement `recording.uploaded` reçu de conversation-service
 
 **Processus** :
-1. Récupérer le fichier audio depuis S3
+1. Récupérer le fichier audio depuis Cloudflare R2
 2. Envoyer à l'API Whisper pour transcription
 3. Parser la réponse et créer les segments temporels
 4. Sauvegarder le Transcript en base

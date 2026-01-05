@@ -116,7 +116,7 @@ public class ConversationTranscript {
     
     private List<TranscriptSegment> segments;
     
-    private String audioUrl; // URL S3 de l'enregistrement
+    private String audioUrl; // URL R2 de l'enregistrement
     
     private AudioMetadata audioMetadata;
     
@@ -660,7 +660,7 @@ public record AggregatedProgress(
     "sessionId": "uuid",
     "userId": "uuid",
     "targetLanguageCode": "en",
-    "audioUrl": "s3://wespeak-recordings/session-uuid.webm",
+    "audioUrl": "r2://wespeak-recordings/session-uuid.webm",
     "estimatedDurationSeconds": 120
   },
   "metadata": {
@@ -767,7 +767,7 @@ public record AggregatedProgress(
       "targetLanguageCode": "en",
       "spokenSeconds": 450
     }],
-    "recordingUrl": "s3://...",
+    "recordingUrl": "r2://...",
     "durationSeconds": 900
   }
 }
@@ -788,7 +788,7 @@ public record AggregatedProgress(
 graph TD
     A[Event: conversation.completed] --> B[Create Transcript Record]
     B --> C[Kafka Queue: feedback.jobs]
-    C --> D[Worker: Audio Download S3]
+    C --> D[Worker: Audio Download R2]
     D --> E[Worker: STT Whisper]
     E --> F[Worker: Language Detection]
     F --> G[Worker: NLP Analysis]
@@ -814,7 +814,7 @@ public class AudioPreprocessor {
     
     public Uni<AudioFile> downloadAndPreprocess(String audioUrl) {
         return Uni.createFrom().item(() -> {
-            // Download from S3
+            // Download from R2
             GetObjectRequest request = GetObjectRequest.builder()
                 .bucket(extractBucket(audioUrl))
                 .key(extractKey(audioUrl))
@@ -1440,8 +1440,8 @@ Log.info("Transcript completed for user: " + hashUserId(userId) +
 - Activer encryption at rest (MongoDB Atlas ou self-hosted)
 - Transcripts contiennent données personnelles
 
-**S3** :
-- Server-Side Encryption (SSE-S3 ou SSE-KMS)
+**Cloudflare R2** :
+- Server-Side Encryption (SSE-S3)
 
 ### 8.4 RGPD Compliance
 
@@ -1531,7 +1531,7 @@ class FeedbackPipelineIntegrationTest {
     @Test
     void shouldProcessCompleteTranscriptionPipeline() {
         // Given
-        String audioUrl = "s3://test-bucket/test-audio.wav";
+        String audioUrl = "r2://test-bucket/test-audio.wav";
         AnalyzeRequest request = new AnalyzeRequest(
             "session-123",
             audioUrl,
@@ -1576,7 +1576,7 @@ export let options = {
 export default function() {
   http.post('https://api.wespeak.com/api/feedback/analyze', JSON.stringify({
     sessionId: 'test-session',
-    audioUrl: 's3://test/audio.wav',
+    audioUrl: 'r2://test/audio.wav',
     userId: 'test-user',
     targetLanguageCode: 'en'
   }), {
@@ -1748,11 +1748,11 @@ openai.whisper.model=whisper-1
 openai.gpt.model=gpt-4-turbo
 openai.timeout.seconds=120
 
-# S3
-quarkus.s3.endpoint-override=http://minio:9000  # Dev
-quarkus.s3.aws.region=us-east-1
-quarkus.s3.aws.credentials.static-provider.access-key-id=${S3_ACCESS_KEY}
-quarkus.s3.aws.credentials.static-provider.secret-access-key=${S3_SECRET_KEY}
+# Cloudflare R2
+quarkus.s3.endpoint-override=https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
+quarkus.s3.aws.region=auto
+quarkus.s3.aws.credentials.static-provider.access-key-id=${R2_ACCESS_KEY}
+quarkus.s3.aws.credentials.static-provider.secret-access-key=${R2_SECRET_KEY}
 
 # Processing
 feedback.processing.max-retries=3
